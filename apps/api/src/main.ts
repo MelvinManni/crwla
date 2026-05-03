@@ -1,0 +1,52 @@
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import cookieParser from 'cookie-parser';
+import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { SelfCheckService } from './health/self-check.service';
+import { AuthService } from './modules/auth/auth.service';
+
+async function bootstrap() {
+  const logger = new Logger('Bootstrap');
+  const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  const config = app.get(ConfigService);
+
+  app.use(cookieParser());
+  app.enableCors({
+    origin: config.get<string>('CORS_ORIGIN', 'http://localhost:3000'),
+    credentials: true,
+  });
+  app.setGlobalPrefix(config.get<string>('API_BASE_PATH', '/api'));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Seed admin if needed (idempotent).
+  await app.get(AuthService).ensureAdmin();
+
+  // Boot-time self-check — surfaces broken invariants from HARNESS.md with
+  // exact repair commands. Does not block startup unless Postgres is down.
+  const report = await app.get(SelfCheckService).run();
+  if (!report.postgres.ok) {
+    logger.error('Postgres self-check failed — aborting');
+    await app.close();
+    process.exit(1);
+  }
+
+  const port = config.get<number>('PORT', 3001);
+  await app.listen(port);
+  logger.log(`CRWLA API listening on http://localhost:${port}${config.get<string>('API_BASE_PATH', '/api')}`);
+}
+
+bootstrap().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error('[bootstrap] failed:', err);
+  process.exit(1);
+});

@@ -1,0 +1,20 @@
+{
+  "name": "crwla",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CRWLA monorepo — apps/{api,web,mobile} are independent projects with their own lockfiles. This root package only carries top-level metadata.",
+  "scripts": {
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "infra:logs": "docker compose -f infra/docker-compose.yml logs -f",
+    "api:dev": "cd apps/api && npm run dev",
+    "api:worker": "cd apps/api && npm run worker:dev",
+    "api:migrate": "cd apps/api && npx prisma migrate deploy",
+    "api:self-check": "cd apps/api && npm run self-check",
+    "web:dev": "cd apps/web && npm run dev",
+    "mobile:dev": "cd apps/mobile && npx expo start"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

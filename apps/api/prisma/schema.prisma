@@ -1,0 +1,166 @@
+// CRWLA — Postgres schema. Notes:
+//   - `Result.searchVector` is a generated tsvector column added by the
+//     accompanying raw-SQL migration `20260503_init_fts/migration.sql`,
+//     because Prisma cannot express GENERATED ... STORED.
+//   - GIN index `idx_result_search_vector` is in the same SQL migration.
+//   - All cuid IDs and timestamp DateTimes are framework-y on purpose.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+enum CronPreset {
+  HOURLY
+  DAILY
+  WEEKLY
+  MANUAL
+}
+
+enum SearchStatus {
+  RUNNING
+  PAUSED
+  ERROR
+}
+
+enum RunStatus {
+  RUNNING
+  OK
+  ERROR
+}
+
+enum AlertFrequency {
+  REALTIME
+  HOURLY
+  DAILY
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  team         String?
+  role         Role      @default(MEMBER)
+  active       Boolean   @default(true)
+  lastActiveAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  searches Search[]
+  alerts   Alert[]
+}
+
+model AccessRequest {
+  id           String              @id @default(cuid())
+  email        String
+  name         String
+  passwordHash String
+  team         String?
+  reason       String?
+  status       AccessRequestStatus @default(PENDING)
+  createdAt    DateTime            @default(now())
+
+  @@index([status, createdAt])
+}
+
+/// "Search" is the keyword-driven recurring crawl (legacy name: Job).
+model Search {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  keywords     String[]
+  locations    String[]
+  sources      String[] // google_news, bing, twitter, blogs…
+  cron         CronPreset   @default(DAILY)
+  filterPrompt String?
+  status       SearchStatus @default(RUNNING)
+  lastRunAt    DateTime?
+  nextRunAt    DateTime?
+  lastError    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  runs    Run[]
+  results Result[]
+  alerts  Alert[]
+
+  @@index([userId, createdAt])
+}
+
+model Run {
+  id           String    @id @default(cuid())
+  searchId     String
+  search       Search    @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  status       RunStatus
+  resultsCount Int       @default(0)
+  durationMs   Int?
+  error        String?
+
+  results Result[]
+
+  @@index([searchId, startedAt(sort: Desc)])
+}
+
+model Result {
+  id          String    @id @default(cuid())
+  searchId    String
+  search      Search    @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  runId       String?
+  run         Run?      @relation(fields: [runId], references: [id], onDelete: SetNull)
+  url         String
+  urlHash     String
+  title       String
+  snippet     String?
+  source      String
+  location    String?
+  score       Float?
+  imageUrl    String?
+  tag         String?
+  publishedAt DateTime?
+  fetchedAt   DateTime  @default(now())
+  hidden      Boolean   @default(false)
+  metadata    Json?
+
+  // searchVector tsvector — added in raw-SQL migration. GIN index in same.
+
+  @@unique([searchId, urlHash])
+  @@index([searchId, fetchedAt(sort: Desc)])
+  @@index([source])
+  @@index([location])
+}
+
+model Alert {
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  searchId      String?
+  search        Search?        @relation(fields: [searchId], references: [id], onDelete: SetNull)
+  keyword       String
+  sources       String[]
+  locations     String[]
+  frequency     AlertFrequency @default(DAILY)
+  active        Boolean        @default(true)
+  lastTriggered DateTime?
+  createdAt     DateTime       @default(now())
+
+  @@index([userId, active])
+}
