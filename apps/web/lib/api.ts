@@ -31,14 +31,23 @@ async function call<T>(method: string, path: string, opts: ApiOpts = {}): Promis
 
   if (!res.ok) {
     let msg: string;
+    let code: string | undefined;
     try {
-      const data = (await res.json()) as { error?: string | { message?: string } };
-      msg =
-        typeof data.error === 'string'
-          ? data.error
-          : (data.error?.message ?? `HTTP ${res.status}`);
+      const data = (await res.json()) as {
+        error?: string | { message?: string; code?: string };
+      };
+      if (typeof data.error === 'string') {
+        msg = data.error;
+      } else {
+        msg = data.error?.message ?? `HTTP ${res.status}`;
+        code = data.error?.code;
+      }
     } catch {
       msg = `HTTP ${res.status}`;
+    }
+    if (typeof window !== 'undefined' && res.status === 403 && code === 'PLAN_LIMIT_EXCEEDED') {
+      const { useStore } = await import('@/lib/store');
+      useStore.getState().showUpgradeLimit({ reason: msg });
     }
     throw new Error(msg);
   }
