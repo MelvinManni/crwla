@@ -71,3 +71,18 @@ export type UserAdminView = {
   last: string;
   active: boolean;
 };
+
+export type SourceCategory = 'news' | 'social' | 'forums' | 'blogs';
+
+export type SourceMeta = {
+  id: string;
+  label: string;
+  category: SourceCategory;
+};
+
+export type SourcesResponse = {
+  categories: ReadonlyArray<SourceCategory>;
+  disabledCategories: SourceCategory[];
+  sources: SourceMeta[];
+  all: SourceMeta[];
+};
