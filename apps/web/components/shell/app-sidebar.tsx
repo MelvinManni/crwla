@@ -18,7 +18,7 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { api } from '@/lib/api';
+import { useSignout } from '@/lib/queries/auth';
 import type { SessionUser } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
@@ -39,12 +39,13 @@ const NAV_ADMIN: NavItem[] = [
 export function AppSidebar({ user }: { user: SessionUser }) {
   const pathname = usePathname();
   const router = useRouter();
+  const signout = useSignout();
   const isActive = (href: string) =>
     href === '/dashboard' ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
   async function signOut() {
     try {
-      await api.post('/auth/signout');
+      await signout.mutateAsync();
     } finally {
       router.push('/signin');
       router.refresh();

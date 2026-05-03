@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
-import { api } from '@/lib/api';
+import { useRequestAccess } from '@/lib/queries/auth';
 
 export default function RequestAccessPage() {
   const [name, setName] = useState('');
@@ -15,9 +15,8 @@ export default function RequestAccessPage() {
   const [password, setPassword] = useState('');
   const [team, setTeam] = useState('');
   const [reason, setReason] = useState('');
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const requestAccess = useRequestAccess();
 
   async function submit() {
     if (!name || !email || !password) {
@@ -29,18 +28,14 @@ export default function RequestAccessPage() {
       return;
     }
     setError(null);
-    setBusy(true);
     try {
-      await api.post('/auth/request-access', { name, email, password, team, reason });
-      setDone(true);
+      await requestAccess.mutateAsync({ name, email, password, team, reason });
     } catch (e) {
       setError((e as Error).message);
-    } finally {
-      setBusy(false);
     }
   }
 
-  if (done) {
+  if (requestAccess.isSuccess) {
     return (
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
         <h1 className="text-xl font-semibold">Request submitted</h1>
@@ -95,8 +90,8 @@ export default function RequestAccessPage() {
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button className="w-full" size="lg" onClick={submit} disabled={busy}>
-          {busy ? <Spinner /> : 'Request access'}
+        <Button className="w-full" size="lg" onClick={submit} disabled={requestAccess.isPending}>
+          {requestAccess.isPending ? <Spinner /> : 'Request access'}
         </Button>
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{' '}

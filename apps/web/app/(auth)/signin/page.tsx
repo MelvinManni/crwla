@@ -7,15 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { api } from '@/lib/api';
-import type { SessionUser } from '@/lib/types';
+import { useSignin } from '@/lib/queries/auth';
 
 export default function SigninPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const signin = useSignin();
 
   async function submit() {
     if (!email || !password) {
@@ -23,15 +22,12 @@ export default function SigninPage() {
       return;
     }
     setError(null);
-    setBusy(true);
     try {
-      await api.post<{ user: SessionUser }>('/auth/signin', { email, password });
+      await signin.mutateAsync({ email, password });
       router.push('/dashboard');
       router.refresh();
     } catch (e) {
       setError((e as Error).message);
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -75,8 +71,8 @@ export default function SigninPage() {
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button className="w-full" size="lg" onClick={submit} disabled={busy}>
-          {busy ? <Spinner /> : 'Sign in'}
+        <Button className="w-full" size="lg" onClick={submit} disabled={signin.isPending}>
+          {signin.isPending ? <Spinner /> : 'Sign in'}
         </Button>
         <p className="text-center text-sm text-muted-foreground">
           No account yet?{' '}
