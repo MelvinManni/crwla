@@ -1,54 +1,48 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { toast } from '@/hooks/use-toast';
+import {
+  useAdminRequests,
+  useAdminUsers,
+  useApproveRequest,
+  useDenyRequest,
+  useUpdateUser,
+} from '@/lib/queries/admin';
 import type { AccessRequestView, UserAdminView } from '@/lib/types';
 
 export function AdminClient({
   initialRequests,
   initialUsers,
 }: {
-  initialRequests: AccessRequestView[];
-  initialUsers: UserAdminView[];
+  initialRequests: { requests: AccessRequestView[] };
+  initialUsers: { users: UserAdminView[] };
 }) {
-  const router = useRouter();
   const [tab, setTab] = useState<'requests' | 'members'>('requests');
-  const [requests, setRequests] = useState(initialRequests);
-  const [users, setUsers] = useState(initialUsers);
-  const [busy, setBusy] = useState<string | null>(null);
+  const { data: requestsData } = useAdminRequests({ initialData: initialRequests });
+  const { data: usersData } = useAdminUsers({ initialData: initialUsers });
+  const requests = requestsData?.requests ?? [];
+  const users = usersData?.users ?? [];
 
-  async function approve(id: string) {
-    setBusy(id);
-    try {
-      await api.post(`/admin/requests/${id}/approve`);
-      setRequests((r) => r.filter((x) => x.id !== id));
-      router.refresh();
-    } finally {
-      setBusy(null);
-    }
-  }
-  async function deny(id: string) {
-    setBusy(id);
-    try {
-      await api.post(`/admin/requests/${id}/deny`);
-      setRequests((r) => r.filter((x) => x.id !== id));
-    } finally {
-      setBusy(null);
-    }
-  }
-  async function toggleActive(u: UserAdminView) {
-    setBusy(u.id);
-    try {
-      await api.patch(`/admin/users/${u.id}`, { active: !u.active });
-      setUsers((arr) => arr.map((x) => (x.id === u.id ? { ...x, active: !u.active } : x)));
-    } finally {
-      setBusy(null);
-    }
-  }
+  const approve = useApproveRequest();
+  const deny = useDenyRequest();
+  const update = useUpdateUser();
+
+  const onError = (err: unknown) =>
+    toast({
+      variant: 'destructive',
+      title: 'Action failed',
+      description: err instanceof Error ? err.message : 'Unknown error',
+    });
+
+  const busyId =
+    (approve.isPending && approve.variables) ||
+    (deny.isPending && deny.variables) ||
+    (update.isPending && update.variables?.id) ||
+    null;
 
   return (
     <div className="mx-auto px-4 py-6 md:px-8">
@@ -88,10 +82,19 @@ export function AdminClient({
                     {r.reason && <p className="mt-2 text-sm">{r.reason}</p>}
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" disabled={busy === r.id} onClick={() => approve(r.id)}>
+                    <Button
+                      size="sm"
+                      disabled={busyId === r.id}
+                      onClick={() => approve.mutate(r.id, { onError })}
+                    >
                       Approve
                     </Button>
-                    <Button size="sm" variant="outline" disabled={busy === r.id} onClick={() => deny(r.id)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busyId === r.id}
+                      onClick={() => deny.mutate(r.id, { onError })}
+                    >
                       Deny
                     </Button>
                   </div>
@@ -118,8 +121,13 @@ export function AdminClient({
               <Button
                 size="sm"
                 variant="outline"
-                disabled={busy === u.id}
-                onClick={() => toggleActive(u)}
+                disabled={busyId === u.id}
+                onClick={() =>
+                  update.mutate(
+                    { id: u.id, patch: { active: !u.active } },
+                    { onError },
+                  )
+                }
               >
                 {u.active ? 'Deactivate' : 'Activate'}
               </Button>

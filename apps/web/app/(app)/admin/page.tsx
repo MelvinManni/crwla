@@ -14,5 +14,5 @@ export default async function AdminPage() {
     api.get<{ users: UserAdminView[] }>('/admin/users', { cookie }),
   ]);
 
-  return <AdminClient initialRequests={reqs.requests} initialUsers={users.users} />;
+  return <AdminClient initialRequests={reqs} initialUsers={users} />;
 }
