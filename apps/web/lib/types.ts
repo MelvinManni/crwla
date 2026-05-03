@@ -71,3 +71,18 @@ export type UserAdminView = {
   last: string;
   active: boolean;
 };
+
+export type AlertFrequency = 'REALTIME' | 'HOURLY' | 'DAILY';
+
+export type AlertView = {
+  id: string;
+  userId: string;
+  searchId: string | null;
+  keyword: string;
+  sources: string[];
+  locations: string[];
+  frequency: AlertFrequency;
+  active: boolean;
+  lastTriggered: string | null;
+  createdAt: string;
+};
