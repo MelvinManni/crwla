@@ -11,8 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
 import { KeywordInput } from '@/components/keyword-input';
 import { CronPicker } from '@/components/cron-picker';
-import { api } from '@/lib/api';
-import type { CronPreset, SearchView } from '@/lib/types';
+import { useCreateSearch } from '@/lib/queries/searches';
+import type { CronPreset } from '@/lib/types';
 
 export default function NewSearchPage() {
   const router = useRouter();
@@ -20,27 +20,20 @@ export default function NewSearchPage() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [cron, setCron] = useState<CronPreset>('DAILY');
   const [filterPrompt, setFilterPrompt] = useState('');
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const create = useCreateSearch();
 
-  async function save() {
+  function save() {
     setError(null);
     if (!name.trim()) return setError('name required');
     if (keywords.length === 0) return setError('add at least one keyword');
-    setBusy(true);
-    try {
-      const out = await api.post<{ job: SearchView }>('/searches', {
-        name: name.trim(),
-        keywords,
-        cron,
-        filterPrompt,
-      });
-      router.push(`/searches/${out.job.id}`);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    create.mutate(
+      { name: name.trim(), keywords, cron, filterPrompt, sources: [] },
+      {
+        onSuccess: () => router.push('/dashboard'),
+        onError: (e) => setError((e as Error).message),
+      },
+    );
   }
 
   return (
@@ -52,8 +45,8 @@ export default function NewSearchPage() {
             Back
           </Link>
         </Button>
-        <Button size="sm" onClick={save} disabled={busy}>
-          {busy ? <Spinner /> : 'Save'}
+        <Button size="sm" onClick={save} disabled={create.isPending}>
+          {create.isPending ? <Spinner /> : 'Save'}
         </Button>
       </div>
 

@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
 import { KeywordInput } from '@/components/keyword-input';
 import { CronPicker } from '@/components/cron-picker';
-import { api } from '@/lib/api';
+import { useDeleteSearch, useUpdateSearch } from '@/lib/queries/searches';
 import type { CronPreset, SearchView } from '@/lib/types';
 
 export function EditSearchClient({ initial }: { initial: SearchView }) {
@@ -21,39 +21,40 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
   const [cron, setCron] = useState<CronPreset>(initial.cron);
   const [filterPrompt, setFilterPrompt] = useState(initial.filterPrompt);
   const [paused, setPaused] = useState(initial.status === 'PAUSED');
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const update = useUpdateSearch(initial.id);
+  const remove = useDeleteSearch(initial.id);
+  const busy = update.isPending || remove.isPending;
 
-  async function save() {
+  function save() {
     setError(null);
-    setBusy(true);
-    try {
-      await api.patch(`/searches/${initial.id}`, {
+    update.mutate(
+      {
         name: name.trim(),
         keywords,
         cron,
         filterPrompt,
         status: paused ? 'PAUSED' : 'RUNNING',
-      });
-      router.push(`/searches/${initial.id}`);
-      router.refresh();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+      },
+      {
+        onSuccess: () => {
+          router.push(`/searches/${initial.id}`);
+          router.refresh();
+        },
+        onError: (e) => setError((e as Error).message),
+      },
+    );
   }
 
-  async function remove() {
+  function onDelete() {
     if (!confirm('Delete this search and all its results? This cannot be undone.')) return;
-    setBusy(true);
-    try {
-      await api.delete(`/searches/${initial.id}`);
-      router.push('/dashboard');
-      router.refresh();
-    } finally {
-      setBusy(false);
-    }
+    remove.mutate(undefined, {
+      onSuccess: () => {
+        router.push('/dashboard');
+        router.refresh();
+      },
+      onError: (e) => setError((e as Error).message),
+    });
   }
 
   return (
@@ -66,12 +67,12 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
           </Link>
         </Button>
         <div className="flex gap-2">
-          <Button variant="destructive" size="sm" onClick={remove} disabled={busy}>
+          <Button variant="destructive" size="sm" onClick={onDelete} disabled={busy}>
             <Trash2 className="h-4 w-4" />
             Delete
           </Button>
           <Button size="sm" onClick={save} disabled={busy}>
-            {busy ? <Spinner /> : 'Save'}
+            {update.isPending ? <Spinner /> : 'Save'}
           </Button>
         </div>
       </div>
