@@ -18,6 +18,7 @@ apps/web/.next
 apps/web/out
 apps/web/.env.local
 apps/web/node_modules
+apps/web/tsconfig.tsbuildinfo
 
 # apps/mobile (Expo)
 apps/mobile/.expo

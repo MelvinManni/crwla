@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { requireSession } from '@/lib/auth';
 import { AppSidebar } from '@/components/shell/app-sidebar';
+import { AuthHydrator } from '@/components/shell/auth-hydrator';
 import {
   SidebarInset,
   SidebarProvider,
@@ -16,6 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
+      <AuthHydrator user={user} />
       <AppSidebar user={user} />
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
