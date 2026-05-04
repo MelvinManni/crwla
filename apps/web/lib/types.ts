@@ -71,3 +71,30 @@ export type UserAdminView = {
   last: string;
   active: boolean;
 };
+
+export type PlanTier = 'FREE' | 'STARTER' | 'BASIC' | 'PRO' | 'BUSINESS';
+export type PlanInterval = 'MONTH' | 'YEAR';
+
+export type PendingChange = {
+  targetTier: PlanTier;
+  targetPlanName: string;
+  targetInterval: PlanInterval;
+  scheduledFor: number; // ms timestamp
+};
+
+export type PlanView = {
+  id: string;
+  tier: PlanTier;
+  name: string;
+  interval: PlanInterval;
+  priceMonthlyCents: number;
+};
+
+export type Entitlements = {
+  tier: PlanTier;
+  planName: string;
+  interval: PlanInterval | null;
+  priceMonthlyCents: number;
+  currentPeriodEnd: number | null; // ms timestamp
+  pendingChange?: PendingChange | null;
+};
