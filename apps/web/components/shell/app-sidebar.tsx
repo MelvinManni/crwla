@@ -1,7 +1,17 @@
-'use client';
+"use client";
 
-import { usePathname, useRouter } from 'next/navigation';
-import { Bell, CreditCard, LayoutDashboard, LogOut, Plus, Search, Shield, Tag, Users } from 'lucide-react';
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Bell,
+  CreditCard,
+  LayoutDashboard,
+  LogOut,
+  Plus,
+  Search,
+  Shield,
+  Tag,
+  Users,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,11 +24,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from '@/components/ui/sidebar';
-import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
-import type { SessionUser } from '@/lib/types';
-import Link from 'next/link';
+} from "@/components/ui/sidebar";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import type { SessionUser } from "@/lib/types";
+import Link from "next/link";
 
 type NavItem = {
   href: __next_route_internal_types__.RouteImpl<string>;
@@ -28,17 +38,17 @@ type NavItem = {
 };
 
 const NAV_PRIMARY: NavItem[] = [
-  { href: '/dashboard', label: 'Searches', icon: LayoutDashboard },
-  { href: '/searches/new', label: 'New search', icon: Plus },
-  { href: '/search', label: 'Recent results', icon: Search },
-  { href: '/alerts', label: 'Alerts', icon: Bell },
-  { href: '/billing', label: 'Billing', icon: CreditCard },
+  { href: "/dashboard", label: "Searches", icon: LayoutDashboard },
+  { href: "/searches/new", label: "New search", icon: Plus },
+  { href: "/search", label: "Recent results", icon: Search },
+  { href: "/alerts", label: "Alerts", icon: Bell },
+  { href: "/billing", label: "Billing", icon: CreditCard },
 ];
 
 const NAV_ADMIN: NavItem[] = [
-  { href: '/admin', label: 'Access requests', icon: Shield },
-  { href: '/admin/users', label: 'Members', icon: Users },
-  { href: '/admin/billing', label: 'Plans & Pricing', icon: Tag },
+  { href: "/admin", label: "Access requests", icon: Shield },
+  { href: "/admin/users", label: "Members", icon: Users },
+  { href: "/admin/billing", label: "Plans & Pricing", icon: Tag },
 ];
 
 function initials(name: string) {
@@ -47,7 +57,7 @@ function initials(name: string) {
     .map((p) => p[0])
     .filter(Boolean)
     .slice(0, 2)
-    .join('')
+    .join("")
     .toUpperCase();
 }
 
@@ -55,13 +65,15 @@ export function AppSidebar({ user }: { user: SessionUser }) {
   const pathname = usePathname();
   const router = useRouter();
   const isActive = (href: string) =>
-    href === '/dashboard' ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+    href === "/dashboard"
+      ? pathname === href
+      : pathname === href || pathname.startsWith(`${href}/`);
 
   async function signOut() {
     try {
-      await api.post('/auth/signout');
+      await api.post("/auth/signout");
     } finally {
-      router.push('/signin');
+      router.push("/signin");
       router.refresh();
     }
   }
@@ -72,7 +84,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
         <div className="flex items-center gap-2.5 px-1">
           <div
             className={cn(
-              'grid h-7 w-7 shrink-0 place-items-center rounded-md bg-fg font-mono text-[13px] font-semibold text-bg-elev',
+              "grid h-7 w-7 shrink-0 place-items-center rounded-md bg-fg font-mono text-[13px] font-semibold text-bg-elev",
             )}
           >
             CR
@@ -100,7 +112,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
                   >
                     <item.icon className="h-3.5 w-3.5" />
                     <span>{item.label}</span>
-                    {typeof item.count === 'number' && (
+                    {typeof item.count === "number" && (
                       <span className="ml-auto font-mono text-[10px] text-fg-subtle">
                         {item.count}
                       </span>
@@ -112,7 +124,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {user.role === 'ADMIN' && (
+        {user.role === "ADMIN" && (
           <SidebarGroup>
             <SidebarGroupLabel className="px-2 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">
               Admin
@@ -144,7 +156,9 @@ export function AppSidebar({ user }: { user: SessionUser }) {
             {initials(user.name)}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[12px] font-medium text-fg">{user.name}</div>
+            <div className="truncate text-[12px] font-medium text-fg">
+              {user.name}
+            </div>
             <div className="truncate font-mono text-[10px] text-fg-muted">
               {user.role.toLowerCase()}
             </div>
