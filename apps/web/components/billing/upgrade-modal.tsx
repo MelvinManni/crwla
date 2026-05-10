@@ -74,7 +74,7 @@ export function UpgradeModalProvider({ children }: { children: ReactNode }) {
             <Button variant="outline" onClick={() => setOpen(false)}>
               Not now
             </Button>
-            <Button asChild render={<Link href="/billing" />} onClick={() => setOpen(false)}>
+            <Button render={<Link href="/billing" />} onClick={() => setOpen(false)}>
               View plans
             </Button>
           </DialogFooter>
