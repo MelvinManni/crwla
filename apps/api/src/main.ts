@@ -54,7 +54,7 @@ async function bootstrap() {
     process.exit(1);
   }
 
-  const port = config.get<number>('PORT', 3001);
+  const port = config.get<number>('PORT', 3000);
   await app.listen(port);
   logger.log(`CRWLA API listening on http://localhost:${port}${config.get<string>('API_BASE_PATH', '/api')}`);
 }
