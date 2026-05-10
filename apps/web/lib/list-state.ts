@@ -1,14 +1,26 @@
-// Read/write list-page state (page, pageSize, view) on the URL.
+// Read/write list-page state (page, pageSize, view, filters) on the URL.
 // Server components read from `searchParams`; client components push via
 // `useRouter()` to keep the URL canonical and shareable.
 
 export type ViewMode = 'list' | 'grid';
+export type TimeWindow = 'all' | '24h' | '7d' | '30d' | '90d';
 
 export type ListParams = {
   page: number;
   pageSize: number;
   view: ViewMode;
+  q: string;
+  keyword: string;
+  time: TimeWindow;
 };
+
+const TIME_WINDOWS: ReadonlySet<TimeWindow> = new Set([
+  'all',
+  '24h',
+  '7d',
+  '30d',
+  '90d',
+]);
 
 export function parseListParams(
   raw: Record<string, string | string[] | undefined>,
@@ -17,8 +29,17 @@ export function parseListParams(
   const page = clamp(toInt(raw.page) ?? 1, 1, 10_000);
   const pageSize = clamp(toInt(raw.pageSize) ?? defaults.pageSize ?? 20, 1, 100);
   const viewRaw = pickStr(raw.view);
-  const view: ViewMode = viewRaw === 'grid' ? 'grid' : viewRaw === 'list' ? 'list' : (defaults.view ?? 'list');
-  return { page, pageSize, view };
+  const view: ViewMode =
+    viewRaw === 'grid'
+      ? 'grid'
+      : viewRaw === 'list'
+        ? 'list'
+        : (defaults.view ?? 'list');
+  const q = pickStr(raw.q)?.trim() ?? '';
+  const keyword = pickStr(raw.keyword)?.trim() ?? '';
+  const timeRaw = pickStr(raw.time) as TimeWindow | undefined;
+  const time: TimeWindow = timeRaw && TIME_WINDOWS.has(timeRaw) ? timeRaw : 'all';
+  return { page, pageSize, view, q, keyword, time };
 }
 
 export function buildListSearch(
@@ -31,8 +52,28 @@ export function buildListSearch(
   if (merged.page > 1) sp.set('page', String(merged.page));
   if (merged.pageSize !== 20) sp.set('pageSize', String(merged.pageSize));
   if (merged.view !== 'list') sp.set('view', merged.view);
+  if (merged.q) sp.set('q', merged.q);
+  if (merged.keyword) sp.set('keyword', merged.keyword);
+  if (merged.time !== 'all') sp.set('time', merged.time);
   const q = sp.toString();
   return q ? `${base}?${q}` : base;
+}
+
+/** Convert a TimeWindow label to a Date cutoff (inclusive). `null` = no filter. */
+export function timeWindowToCutoff(t: TimeWindow): Date | null {
+  switch (t) {
+    case '24h':
+      return new Date(Date.now() - 24 * 60 * 60 * 1000);
+    case '7d':
+      return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    case '30d':
+      return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    case '90d':
+      return new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    case 'all':
+    default:
+      return null;
+  }
 }
 
 function pickStr(v: string | string[] | undefined): string | undefined {

@@ -289,6 +289,56 @@ export class BillingService {
   }
 
   /**
+   * If the user's local subscription is FREE (or absent) but Polar reports
+   * an active paid subscription for them, sync it down. Tolerant: any error
+   * is swallowed and logged so login / profile fetches never break when
+   * Polar is unreachable. Per-user cooldown (`reconcileMinIntervalMs`)
+   * prevents this from hammering Polar on every authenticated request.
+   *
+   * Use case: a webhook delivery missed during deploy, or the user returned
+   * from checkout before `subscription.created` arrived — they end up on
+   * FREE locally even though Polar has them on a paid plan. Running this on
+   * sign-in / profile-fetch is the cheapest way to self-heal without making
+   * the user click "manage billing".
+   */
+  async reconcileFromPolar(userId: string): Promise<void> {
+    if (!this.polar.enabled()) return;
+    const last = BillingService.reconcileLastRunByUser.get(userId);
+    if (last && Date.now() - last < BillingService.reconcileMinIntervalMs) return;
+    BillingService.reconcileLastRunByUser.set(userId, Date.now());
+
+    try {
+      const sub = await this.prisma.subscription.findUnique({
+        where: { userId },
+        include: { plan: true },
+      });
+      // Only reconcile when local state is FREE / missing. Anything else is
+      // already a paid tier and webhooks own the truth there.
+      if (sub && sub.plan.tier !== 'FREE') return;
+
+      const polarSub = await this.polar.findActiveSubscriptionByExternalId(userId);
+      if (!polarSub) return;
+
+      // Reuse the webhook upsert path so the local row matches exactly what
+      // a `subscription.active` event would have produced.
+      await this.upsertSubscriptionFromWebhook(polarSub as PolarSubscriptionPayload);
+      this.logger.log(
+        `reconciled user ${userId} from Polar: ${(polarSub as { id?: string }).id ?? '?'}`,
+      );
+    } catch (e) {
+      this.logger.warn(
+        `polar reconcile failed for user ${userId}: ${(e as Error).message}`,
+      );
+    }
+  }
+
+  // Per-user cooldown for `reconcileFromPolar`. In-memory is fine: this is
+  // a self-heal nudge, not authoritative state — a process restart just
+  // means the next auth request triggers one extra Polar call per user.
+  private static readonly reconcileLastRunByUser = new Map<string, number>();
+  private static readonly reconcileMinIntervalMs = 5 * 60 * 1000;
+
+  /**
    * Public — called both from the immediate-downgrade path in
    * `createCheckout` and from `ScheduledPlanChangesProcessor` when a row's
    * `scheduledFor` has elapsed.

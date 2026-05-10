@@ -22,6 +22,6 @@ import { ScheduledPlanChangesProcessor } from '../../queues/scheduled-plan-chang
     ScheduledPlanChangesQueue,
     ScheduledPlanChangesProcessor,
   ],
-  exports: [EntitlementsService, PlansService, ScheduledPlanChangesQueue],
+  exports: [BillingService, EntitlementsService, PlansService, ScheduledPlanChangesQueue],
 })
 export class BillingModule {}

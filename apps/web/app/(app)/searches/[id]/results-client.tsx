@@ -2,8 +2,18 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { ArrowLeft, ExternalLink, Pencil, Play, RefreshCw, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  ArrowUpDown,
+  ExternalLink,
+  Pencil,
+  Play,
+  RefreshCw,
+  Sparkles,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,8 +22,12 @@ import { KeywordChip } from '@/components/keyword-chip';
 import { StatusPill } from '@/components/status-pill';
 import { ViewToggle, type ViewMode } from '@/components/view-toggle';
 import { Pagination } from '@/components/pagination';
+import { ListFilterBar, type ListFilters } from '@/components/list-filter-bar';
+import { exportCsv, exportXls, type ExportColumn } from '@/lib/export';
 import { buildListSearch, type ListParams } from '@/lib/list-state';
 import { api } from '@/lib/api';
+import { toast } from '@/components/ui/sonner';
+import { cn } from '@/lib/utils';
 import type { ResultView } from '@/lib/types';
 
 type Initial = {
@@ -33,6 +47,22 @@ type Initial = {
   hasMore: boolean;
 };
 
+type SortKey = 'source' | 'title' | 'when';
+type SortDir = 'asc' | 'desc';
+
+const EXPORT_COLUMNS: ExportColumn<ResultView>[] = [
+  { header: 'Source', value: (r) => r.source },
+  { header: 'Title', value: (r) => r.title },
+  { header: 'URL', value: (r) => r.url },
+  { header: 'Snippet', value: (r) => r.snippet ?? '' },
+  { header: 'Tag', value: (r) => r.tag ?? '' },
+  { header: 'When', value: (r) => r.time ?? '' },
+  {
+    header: 'Published',
+    value: (r) => (r.publishedAt ? new Date(r.publishedAt).toISOString() : ''),
+  },
+];
+
 export function ResultsClient({
   initial,
   listParams,
@@ -47,22 +77,45 @@ export function ResultsClient({
   const [filterMode, setFilterMode] = useState<string | null>(null);
   const [busy, setBusy] = useState<'run' | 'filter' | 'reload' | null>(null);
 
+  async function fetchLatest() {
+    const out = await api.get<Initial>(`/searches/${initial.job.id}/results`);
+    setResults(out.results);
+    router.refresh();
+  }
+
   async function reload() {
     setBusy('reload');
     try {
-      const out = await api.get<Initial>(`/searches/${initial.job.id}/results`);
-      setResults(out.results);
-      router.refresh();
+      await fetchLatest();
     } finally {
       setBusy(null);
     }
   }
 
+  // Stays in `busy='run'` from click through fetch so the button shows one
+  // continuous loading state. Sonner drives a single toast id for the
+  // whole lifecycle (loading → success/error) — no stacked toasts on retry.
   async function runNow() {
     setBusy('run');
+    const t = toast.loading('Starting run…');
     try {
       await api.post(`/searches/${initial.job.id}/run`);
-      setTimeout(reload, 1500);
+      toast.loading('Run started — fetching results…', { id: t });
+      // Give the worker a moment to insert results before we refetch.
+      await new Promise((r) => setTimeout(r, 1500));
+      await fetchLatest();
+      toast.success('Results refreshed', { id: t });
+    } catch (e) {
+      const err = e as Error & { code?: string };
+      if (err.code === 'RUN_IN_PROGRESS') {
+        toast.warning('Run already in progress', {
+          id: t,
+          description:
+            'Wait for the current run to finish before starting another.',
+        });
+      } else {
+        toast.error('Run failed', { id: t, description: err.message });
+      }
     } finally {
       setBusy(null);
     }
@@ -136,7 +189,17 @@ export function ResultsClient({
             disabled={busy !== null}
             className="rounded-lg bg-fg text-bg-elev hover:bg-fg/90"
           >
-            {busy === 'run' ? <Spinner /> : <><Play className="h-3.5 w-3.5" />Run now</>}
+            {busy === 'run' ? (
+              <>
+                <Spinner />
+                Running…
+              </>
+            ) : (
+              <>
+                <Play className="h-3.5 w-3.5" />
+                Run now
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -197,19 +260,11 @@ export function ResultsClient({
       {/* Results panel */}
       <div className="flex-1 px-4 py-4 md:px-6">
         <ResultsPanel
+          searchId={initial.job.id}
           results={results}
           total={initial.total}
+          searchKeywords={initial.job.keywords}
           listParams={listParams}
-          onView={(next) =>
-            router.push(
-              buildListSearch(`/searches/${initial.job.id}`, { view: next, page: 1 }, listParams) as never,
-            )
-          }
-          onPage={(next) =>
-            router.push(
-              buildListSearch(`/searches/${initial.job.id}`, { page: next }, listParams) as never,
-            )
-          }
         />
       </div>
     </div>
@@ -217,45 +272,177 @@ export function ResultsClient({
 }
 
 function ResultsPanel({
+  searchId,
   results,
   total,
+  searchKeywords,
   listParams,
-  onView,
-  onPage,
 }: {
+  searchId: string;
   results: ResultView[];
   total: number;
+  searchKeywords: string[];
   listParams: ListParams;
-  onView: (next: ViewMode) => void;
-  onPage: (next: number) => void;
 }) {
+  const router = useRouter();
+  const base = `/searches/${searchId}`;
+
+  const [filters, setFilters] = useState<ListFilters>({
+    query: listParams.q,
+    keyword: listParams.keyword,
+    time: listParams.time,
+  });
+  useEffect(() => {
+    setFilters({
+      query: listParams.q,
+      keyword: listParams.keyword,
+      time: listParams.time,
+    });
+  }, [listParams.q, listParams.keyword, listParams.time]);
+
+  const [sortKey, setSortKey] = useState<SortKey>('when');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function pushFilters(next: ListFilters, debounceQuery: boolean) {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const apply = () => {
+      router.replace(
+        buildListSearch(
+          base,
+          { q: next.query, keyword: next.keyword, time: next.time, page: 1 },
+          listParams,
+        ) as never,
+      );
+    };
+    if (debounceQuery) debounceRef.current = setTimeout(apply, 300);
+    else apply();
+  }
+  function onFilters(next: ListFilters) {
+    const queryChanged = next.query !== filters.query;
+    const otherChanged =
+      next.keyword !== filters.keyword || next.time !== filters.time;
+    setFilters(next);
+    if (otherChanged) pushFilters(next, false);
+    else if (queryChanged) pushFilters(next, true);
+  }
+
+  const sorted = useMemo(() => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const out = [...results];
+    out.sort((a, b) => {
+      switch (sortKey) {
+        case 'source':
+          return a.source.localeCompare(b.source) * dir;
+        case 'title':
+          return a.title.localeCompare(b.title) * dir;
+        case 'when':
+        default: {
+          const av = a.publishedAt ?? 0;
+          const bv = b.publishedAt ?? 0;
+          return (av - bv) * dir;
+        }
+      }
+    });
+    return out;
+  }, [results, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'when' ? 'desc' : 'asc');
+    }
+  }
+
+  function onView(next: ViewMode) {
+    router.push(buildListSearch(base, { view: next, page: 1 }, listParams) as never);
+  }
+  function onPage(next: number) {
+    router.push(buildListSearch(base, { page: next }, listParams) as never);
+  }
+  function onPageSize(next: number) {
+    router.push(
+      buildListSearch(base, { pageSize: next, page: 1 }, listParams) as never,
+    );
+  }
+  function onExportCsv() {
+    exportCsv('search-results', sorted, EXPORT_COLUMNS);
+  }
+  function onExportXls() {
+    exportXls('search-results', sorted, EXPORT_COLUMNS);
+  }
+
+  const isFiltered =
+    listParams.q !== '' || listParams.keyword !== '' || listParams.time !== 'all';
+
   return (
     <div className="overflow-hidden rounded-[10px] border border-border bg-bg-elev">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div className="flex items-center gap-3">
-          <span className="text-[13px] font-medium">Results</span>
-          <span className="font-mono text-[11px] text-fg-muted">{total} items</span>
+      <div className="sticky top-0 z-20 bg-bg-elev">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="text-[13px] font-medium">Results</span>
+            <span className="font-mono text-[11px] text-fg-muted">
+              {isFiltered ? `${total} matching` : `${total} items`}
+            </span>
+          </div>
+          <ViewToggle value={listParams.view} onChange={onView} />
         </div>
-        <ViewToggle value={listParams.view} onChange={onView} />
+        <ListFilterBar
+          filters={filters}
+          onFilters={onFilters}
+          keywords={searchKeywords}
+          pageSize={listParams.pageSize}
+          onPageSize={onPageSize}
+          onExportCsv={onExportCsv}
+          onExportXls={onExportXls}
+          searchPlaceholder="Search title, snippet or source…"
+          keywordLabel="Matches"
+          keywordAnyLabel="Any keyword"
+          timeLabel="Published"
+        />
       </div>
 
-      {results.length === 0 ? (
+      {sorted.length === 0 ? (
         <div className="px-6 py-12 text-center">
-          <p className="text-[13px] font-medium text-fg">No results yet</p>
-          <p className="mt-1 text-[12px] text-fg-muted">Press Run now to fire a fresh crawl.</p>
+          <p className="text-[13px] font-medium text-fg">
+            {isFiltered ? 'No results match the current filters' : 'No results yet'}
+          </p>
+          <p className="mt-1 text-[12px] text-fg-muted">
+            {isFiltered
+              ? 'Try clearing a filter or widening the time window.'
+              : 'Press Run now to fire a fresh crawl.'}
+          </p>
         </div>
       ) : listParams.view === 'list' ? (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Source</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead className="w-32">When</TableHead>
+              <SortableHead
+                label="Source"
+                active={sortKey === 'source'}
+                dir={sortDir}
+                onClick={() => toggleSort('source')}
+              />
+              <SortableHead
+                label="Title"
+                active={sortKey === 'title'}
+                dir={sortDir}
+                onClick={() => toggleSort('title')}
+              />
+              <SortableHead
+                label="When"
+                active={sortKey === 'when'}
+                dir={sortDir}
+                onClick={() => toggleSort('when')}
+                className="w-32"
+              />
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {results.map((r) => (
+            {sorted.map((r) => (
               <TableRow
                 key={r.id}
                 className="cursor-pointer"
@@ -289,7 +476,7 @@ function ResultsPanel({
         </Table>
       ) : (
         <div className="flex flex-col">
-          {results.map((r) => (
+          {sorted.map((r) => (
             <a
               key={r.id}
               href={r.url}
@@ -341,5 +528,43 @@ function ResultsPanel({
         onChange={onPage}
       />
     </div>
+  );
+}
+
+function SortableHead({
+  label,
+  active,
+  dir,
+  onClick,
+  className,
+}: {
+  label: string;
+  active: boolean;
+  dir: SortDir;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <TableHead className={cn('select-none', className)}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          'inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.06em] hover:text-fg',
+          active ? 'text-fg' : 'text-fg-subtle',
+        )}
+      >
+        {label}
+        {active ? (
+          dir === 'asc' ? (
+            <ArrowUp className="h-3 w-3" />
+          ) : (
+            <ArrowDown className="h-3 w-3" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-50" />
+        )}
+      </button>
+    </TableHead>
   );
 }

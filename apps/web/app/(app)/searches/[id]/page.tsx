@@ -33,17 +33,23 @@ export default async function ResultsPage({
   await requireSession();
   const { id } = await params;
   const sp = await searchParams;
-  const list = parseListParams(sp, { pageSize: 25, view: 'list' });
+  const list = parseListParams(sp, { pageSize: 20, view: 'list' });
 
   const jar = await cookies();
   const cookie = jar.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
 
+  const qs = new URLSearchParams();
+  qs.set('page', String(list.page));
+  qs.set('pageSize', String(list.pageSize));
+  if (list.q) qs.set('q', list.q);
+  if (list.keyword) qs.set('keyword', list.keyword);
+  if (list.time !== 'all') qs.set('time', list.time);
+
   let data: ApiOut;
   try {
-    data = await api.get<ApiOut>(
-      `/searches/${id}/results?page=${list.page}&pageSize=${list.pageSize}`,
-      { cookie },
-    );
+    data = await api.get<ApiOut>(`/searches/${id}/results?${qs.toString()}`, {
+      cookie,
+    });
   } catch {
     notFound();
   }

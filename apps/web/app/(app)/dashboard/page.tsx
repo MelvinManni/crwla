@@ -27,10 +27,13 @@ export default async function DashboardPage({
 
   const jar = await cookies();
   const cookie = jar.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
-  const out = await api.get<ApiOut>(
-    `/searches?page=${params.page}&pageSize=${params.pageSize}`,
-    { cookie },
-  );
+  const qs = new URLSearchParams();
+  qs.set('page', String(params.page));
+  qs.set('pageSize', String(params.pageSize));
+  if (params.q) qs.set('q', params.q);
+  if (params.keyword) qs.set('keyword', params.keyword);
+  if (params.time !== 'all') qs.set('time', params.time);
+  const out = await api.get<ApiOut>(`/searches?${qs.toString()}`, { cookie });
 
   return (
     <div className="mx-auto px-4 py-6 md:px-8">
@@ -47,13 +50,7 @@ export default async function DashboardPage({
         </Button>
       </div>
 
-      <DashboardClient
-        initial={out.jobs}
-        total={out.total}
-        page={params.page}
-        pageSize={params.pageSize}
-        view={params.view}
-      />
+      <DashboardClient initial={out.jobs} total={out.total} listParams={params} />
     </div>
   );
 }

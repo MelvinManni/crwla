@@ -214,12 +214,14 @@ export class EntitlementsService {
         limits: free.limits,
         bonus: { extraManualRuns: 0, extraSms: 0, extraSeats: 0 },
         usage: emptyUsage(),
+        pendingChange: null,
       };
     }
 
     const limits = sub.plan.limits as unknown as PlanLimits;
     const meter = await this.currentMeter(sub.id);
     const bonus = await this.aggregateAddOns(sub.id);
+    const pendingChange = await this.pendingChangeFor(sub.userId);
 
     return {
       plan: { id: sub.plan.id, tier: sub.plan.tier, name: sub.plan.name },
@@ -238,6 +240,24 @@ export class EntitlementsService {
         whatsappAlerts: meter.whatsappAlerts,
         csvExports: meter.csvExports,
       },
+      pendingChange,
+    };
+  }
+
+  private async pendingChangeFor(
+    userId: string,
+  ): Promise<Entitlements['pendingChange']> {
+    const row = await this.prisma.scheduledPlanChange.findFirst({
+      where: { userId, status: 'PENDING' },
+      include: { targetPlan: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!row) return null;
+    return {
+      targetTier: row.targetPlan.tier,
+      targetPlanName: row.targetPlan.name,
+      targetInterval: row.targetInterval,
+      scheduledFor: row.scheduledFor.getTime(),
     };
   }
 

@@ -23,10 +23,19 @@ export class ResultsController {
     @Param('id') id: string,
     @Query('page') pageRaw?: string,
     @Query('pageSize') pageSizeRaw?: string,
+    @Query('q') q?: string,
+    @Query('keyword') keyword?: string,
+    @Query('time') time?: string,
   ) {
     const page = pageRaw ? Number(pageRaw) : undefined;
     const pageSize = pageSizeRaw ? Number(pageSizeRaw) : undefined;
-    return this.results.listFor(user.id, id, { page, pageSize });
+    return this.results.listFor(user.id, id, {
+      page,
+      pageSize,
+      q,
+      keyword,
+      time,
+    });
   }
 
   @Post('filter')

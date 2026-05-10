@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { Role, User } from '@prisma/client';
+import { BillingService } from '../billing/billing.service';
 
 export type SessionUser = {
   id: string;
@@ -21,6 +22,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly billing: BillingService,
   ) {}
 
   hashPassword(plain: string): string {
@@ -44,6 +46,10 @@ export class AuthService {
       throw new UnauthorizedException('invalid credentials');
     }
     const token = this.signToken(user);
+    // Self-heal stale FREE-tier rows against Polar in the background.
+    // Fire-and-forget so a slow Polar API call never delays login; the
+    // method swallows its own errors and rate-limits per-user internally.
+    this.reconcileBilling(user.id);
     return {
       token,
       user: {
@@ -60,6 +66,10 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user || !user.active) return null;
     await this.prisma.user.update({ where: { id }, data: { lastActiveAt: new Date() } });
+    // Same self-heal on profile fetch — covers users already holding a
+    // valid JWT who never see `signin` again. The reconcile method
+    // rate-limits per user, so this is safe to call on every /auth/me.
+    this.reconcileBilling(id);
     return {
       id: user.id,
       email: user.email,
@@ -67,6 +77,12 @@ export class AuthService {
       role: user.role,
       team: user.team,
     };
+  }
+
+  private reconcileBilling(userId: string): void {
+    void this.billing.reconcileFromPolar(userId).catch((e) => {
+      this.logger.warn(`reconcileBilling(${userId}) crashed: ${(e as Error).message}`);
+    });
   }
 
   /**

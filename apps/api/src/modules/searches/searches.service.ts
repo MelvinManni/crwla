@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CronPreset, Prisma, Search, SearchStatus } from '@prisma/client';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { CronPreset, Prisma, RunStatus, Search, SearchStatus } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { ScrapeQueue } from '../../queues/scrape/scrape.queue';
 import { SourceRegistry } from '../scraper/sources/source.registry';
@@ -36,6 +36,21 @@ function cronLabel(c: CronPreset): string {
     case 'DAILY': return 'Daily · 09:00';
     case 'WEEKLY': return 'Weekly · Mon 08:00';
     case 'MANUAL': return 'Manual';
+  }
+}
+
+function timeWindowToCutoff(t: string | undefined): Date | null {
+  switch (t) {
+    case '24h':
+      return new Date(Date.now() - 24 * 60 * 60 * 1000);
+    case '7d':
+      return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    case '30d':
+      return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    case '90d':
+      return new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    default:
+      return null;
   }
 }
 
@@ -77,11 +92,32 @@ export class SearchesService {
 
   async listForUser(
     userId: string,
-    pagination: { page?: number; pageSize?: number } = {},
+    opts: {
+      page?: number;
+      pageSize?: number;
+      q?: string;
+      keyword?: string;
+      time?: string;
+    } = {},
   ) {
-    const page = Math.max(1, pagination.page ?? 1);
-    const pageSize = Math.min(100, Math.max(1, pagination.pageSize ?? 20));
-    const where = { userId };
+    const page = Math.max(1, opts.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, opts.pageSize ?? 20));
+    const where: Prisma.SearchWhereInput = { userId };
+    const q = opts.q?.trim();
+    if (q) {
+      where.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { keywords: { has: q } },
+      ];
+    }
+    const keyword = opts.keyword?.trim();
+    if (keyword) {
+      where.keywords = { has: keyword };
+    }
+    const cutoff = timeWindowToCutoff(opts.time);
+    if (cutoff) {
+      where.createdAt = { gte: cutoff };
+    }
     const [total, rows] = await Promise.all([
       this.prisma.search.count({ where }),
       this.prisma.search.findMany({
@@ -204,6 +240,19 @@ export class SearchesService {
 
   async runNow(userId: string, id: string) {
     const existing = await this.getOwned(userId, id);
+    // Bail before charging the user's manual-run quota if a previous run is
+    // still in flight — otherwise a re-queue would burn a quota unit and
+    // race with the live processor.
+    const inflight = await this.prisma.run.findFirst({
+      where: { searchId: existing.id, status: RunStatus.RUNNING },
+      select: { id: true },
+    });
+    if (inflight) {
+      throw new ConflictException({
+        message: 'A run is already in progress for this search.',
+        code: 'RUN_IN_PROGRESS',
+      });
+    }
     // Consume one manual-run from the user's monthly quota (or a paid run
     // pack). Throws ForbiddenException with PLAN_LIMIT_EXCEEDED on quota.
     await this.entitlements.consumeManualRun(userId);

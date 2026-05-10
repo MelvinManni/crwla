@@ -28,10 +28,19 @@ export class SearchesController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('page') pageRaw?: string,
     @Query('pageSize') pageSizeRaw?: string,
+    @Query('q') q?: string,
+    @Query('keyword') keyword?: string,
+    @Query('time') time?: string,
   ) {
     const page = pageRaw ? Number(pageRaw) : undefined;
     const pageSize = pageSizeRaw ? Number(pageSizeRaw) : undefined;
-    const out = await this.searches.listForUser(user.id, { page, pageSize });
+    const out = await this.searches.listForUser(user.id, {
+      page,
+      pageSize,
+      q,
+      keyword,
+      time,
+    });
     // `jobs` kept for backward-compatible UI; new clients read `items` + meta.
     return { jobs: out.items, ...out };
   }

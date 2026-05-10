@@ -85,18 +85,18 @@ export class SearchService {
       url: string;
       source: string;
       location: string | null;
-      publishedAt: Date | null;
+      published_at: Date | null;
       rank: number;
     }> = await this.prisma.$queryRawUnsafe(
-      `SELECT id, title, snippet, url, source, location, "publishedAt",
-              ts_rank("searchVector", websearch_to_tsquery('english', $1)) AS rank
-       FROM "Result"
-       WHERE "searchVector" @@ websearch_to_tsquery('english', $1)
+      `SELECT id, title, snippet, url, source, location, published_at,
+              ts_rank(search_vector, websearch_to_tsquery('english', $1)) AS rank
+       FROM result
+       WHERE search_vector @@ websearch_to_tsquery('english', $1)
          AND ($2::text[] = '{}' OR source = ANY($2::text[]))
          AND ($3::text[] = '{}' OR location = ANY($3::text[]))
-         AND ($4::timestamp IS NULL OR "fetchedAt" >= $4)
+         AND ($4::timestamp IS NULL OR fetched_at >= $4)
          AND hidden = false
-       ORDER BY rank DESC, "fetchedAt" DESC
+       ORDER BY rank DESC, fetched_at DESC
        LIMIT $5 OFFSET $6`,
       q,
       sources,
@@ -115,7 +115,7 @@ export class SearchService {
         url: r.url,
         source: r.source,
         location: r.location,
-        publishedAt: r.publishedAt ? r.publishedAt.getTime() : null,
+        publishedAt: r.published_at ? r.published_at.getTime() : null,
         score: r.rank,
       })),
     };

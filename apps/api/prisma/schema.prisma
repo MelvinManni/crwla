@@ -89,128 +89,139 @@ model User {
   id           String    @id @default(cuid())
   email        String    @unique
   name         String
-  passwordHash String
+  passwordHash String    @map("password_hash")
   team         String?
   role         Role      @default(MEMBER)
   active       Boolean   @default(true)
-  lastActiveAt DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  lastActiveAt DateTime? @map("last_active_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   /// Source categories this user is *not* allowed to crawl. Empty = all
   /// categories enabled. Values are SourceCategory strings (e.g. "social",
   /// "forums"). Validated at search-create time and re-checked in the
   /// scrape processor so a denylist change pauses live crawls too.
-  disabledSourceCategories String[] @default([])
+  disabledSourceCategories String[] @default([]) @map("disabled_source_categories")
 
   searches         Search[]
   alerts           Alert[]
   subscription     Subscription?
   scheduledChanges ScheduledPlanChange[]
+
+  @@map("user")
 }
 
 model AccessRequest {
   id           String              @id @default(cuid())
   email        String
   name         String
-  passwordHash String
+  passwordHash String              @map("password_hash")
   team         String?
   reason       String?
   status       AccessRequestStatus @default(PENDING)
-  createdAt    DateTime            @default(now())
+  createdAt    DateTime            @default(now()) @map("created_at")
 
   @@index([status, createdAt])
+  @@map("access_request")
 }
 
 /// "Search" is the keyword-driven recurring crawl (legacy name: Job).
 model Search {
   id           String       @id @default(cuid())
-  userId       String
+  userId       String       @map("user_id")
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   name         String
   keywords     String[]
   locations    String[]
   sources      String[] // google_news, bing, twitter, blogs…
   cron         CronPreset   @default(DAILY)
-  filterPrompt String?
+  filterPrompt String?      @map("filter_prompt")
   status       SearchStatus @default(RUNNING)
-  lastRunAt    DateTime?
-  nextRunAt    DateTime?
-  lastError    String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  lastRunAt    DateTime?    @map("last_run_at")
+  nextRunAt    DateTime?    @map("next_run_at")
+  lastError    String?      @map("last_error")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
 
   runs    Run[]
   results Result[]
   alerts  Alert[]
 
   @@index([userId, createdAt])
+  @@map("search")
 }
 
 model Run {
   id           String    @id @default(cuid())
-  searchId     String
+  searchId     String    @map("search_id")
   search       Search    @relation(fields: [searchId], references: [id], onDelete: Cascade)
-  startedAt    DateTime  @default(now())
-  finishedAt   DateTime?
+  startedAt    DateTime  @default(now()) @map("started_at")
+  finishedAt   DateTime? @map("finished_at")
   status       RunStatus
-  resultsCount Int       @default(0)
-  durationMs   Int?
+  resultsCount Int       @default(0) @map("results_count")
+  durationMs   Int?      @map("duration_ms")
   error        String?
 
   results Result[]
 
   @@index([searchId, startedAt(sort: Desc)])
+  @@map("run")
 }
 
 model Result {
   id          String    @id @default(cuid())
-  searchId    String
+  searchId    String    @map("search_id")
   search      Search    @relation(fields: [searchId], references: [id], onDelete: Cascade)
-  runId       String?
+  runId       String?   @map("run_id")
   run         Run?      @relation(fields: [runId], references: [id], onDelete: SetNull)
   url         String
-  urlHash     String
+  urlHash     String    @map("url_hash")
   title       String
   snippet     String?
   source      String
   location    String?
   score       Float?
-  imageUrl    String?
+  imageUrl    String?   @map("image_url")
   tag         String?
-  publishedAt DateTime?
-  fetchedAt   DateTime  @default(now())
+  publishedAt DateTime? @map("published_at")
+  fetchedAt   DateTime  @default(now()) @map("fetched_at")
   hidden      Boolean   @default(false)
   metadata    Json?
 
-  /// `searchVector tsvector GENERATED ALWAYS AS (...) STORED` is added by
+  /// `search_vector tsvector GENERATED ALWAYS AS (...) STORED` is added by
   /// the raw-SQL migration `20260503_init_fts/migration.sql`. Declared here
-  /// as `Unsupported` so `prisma migrate dev` doesn't drift-detect and try
-  /// to drop it. The Prisma client never reads/writes this column directly
-  /// — full-text search uses `$queryRaw` (see ResultsService / SearchService).
-  searchVector Unsupported("tsvector")?
+  /// as `Unsupported` with a matching `@default(dbgenerated(...))` and a
+  /// `@@index(... type: Gin)` so `prisma migrate dev` doesn't drift-detect
+  /// and try to drop it. The Prisma client never reads/writes this column
+  /// directly — full-text search uses `$queryRaw` (see ResultsService /
+  /// SearchService). Keep the dbgenerated expression byte-identical to what
+  /// `prisma db pull` produces after the snake_case rename migration.
+  searchVector Unsupported("tsvector")? @default(dbgenerated("to_tsvector('english'::regconfig, ((((COALESCE(title, ''::text) || ' '::text) || COALESCE(snippet, ''::text)) || ' '::text) || COALESCE((metadata ->> 'keywords'::text), ''::text)))")) @map("search_vector")
 
   @@unique([searchId, urlHash])
   @@index([searchId, fetchedAt(sort: Desc)])
   @@index([source])
   @@index([location])
+  @@index([searchVector], map: "idx_result_search_vector", type: Gin)
+  @@map("result")
 }
 
 model Alert {
   id            String         @id @default(cuid())
-  userId        String
+  userId        String         @map("user_id")
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  searchId      String?
+  searchId      String?        @map("search_id")
   search        Search?        @relation(fields: [searchId], references: [id], onDelete: SetNull)
   keyword       String
   sources       String[]
   locations     String[]
   frequency     AlertFrequency @default(DAILY)
   active        Boolean        @default(true)
-  lastTriggered DateTime?
-  createdAt     DateTime       @default(now())
+  lastTriggered DateTime?      @map("last_triggered")
+  createdAt     DateTime       @default(now()) @map("created_at")
 
   @@index([userId, active])
+  @@map("alert")
 }
 
 /// Plan rows are admin-managed at runtime — name/price/limits/features are
@@ -226,8 +237,8 @@ model Plan {
   tier                PlanTier         @unique
   name                String
   description         String?
-  priceMonthlyCents   Int              @default(0)
-  priceYearlyCents    Int              @default(0)
+  priceMonthlyCents   Int              @default(0) @map("price_monthly_cents")
+  priceYearlyCents    Int              @default(0) @map("price_yearly_cents")
   /// Polar uses one `recurring_interval` per product, so a plan that
   /// offers both monthly and yearly billing needs two products. Both ids
   /// are filled by PolarService.syncPlan() on save (or null for drafts /
@@ -235,58 +246,61 @@ model Plan {
   ///
   /// `polarProductId` is kept for backwards compat — currently aliased to
   /// the monthly product. New code should read `polarProductMonthlyId`.
-  polarProductId        String?
-  polarProductMonthlyId String?
-  polarProductYearlyId  String?
+  polarProductId        String?       @map("polar_product_id")
+  polarProductMonthlyId String?       @map("polar_product_monthly_id")
+  polarProductYearlyId  String?       @map("polar_product_yearly_id")
   /// Per-product default price ids — informational. Checkout passes the
   /// product id; Polar uses the product's current price automatically.
-  polarPriceMonthlyId   String?
-  polarPriceYearlyId    String?
+  polarPriceMonthlyId   String?       @map("polar_price_monthly_id")
+  polarPriceYearlyId    String?       @map("polar_price_yearly_id")
   /// JSON snapshot of limits + features for the FE. See `PlanLimits` in the
   /// catalogue file for the canonical shape.
   limits              Json
   features            Json             @default("[]")
   /// false = archived; hidden from pickers, Polar product archived too.
   active              Boolean          @default(true)
-  sortOrder           Int              @default(0)
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  sortOrder           Int              @default(0) @map("sort_order")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
 
   subscriptions       Subscription[]
   scheduledChangesAsCurrent ScheduledPlanChange[] @relation("ScheduledChangeCurrent")
   scheduledChangesAsTarget  ScheduledPlanChange[] @relation("ScheduledChangeTarget")
+
+  @@map("plan")
 }
 
 /// One row per user (or team). `userId` is unique — upgrade/downgrade
 /// mutates the existing row; canceled subs stay around for history.
 model Subscription {
   id                   String              @id @default(cuid())
-  userId               String              @unique
+  userId               String              @unique @map("user_id")
   user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  planId               String
+  planId               String              @map("plan_id")
   plan                 Plan                @relation(fields: [planId], references: [id])
   status               SubscriptionStatus  @default(ACTIVE)
   interval             BillingInterval     @default(MONTH)
-  currentPeriodStart   DateTime?
-  currentPeriodEnd     DateTime?
-  cancelAtPeriodEnd    Boolean             @default(false)
-  canceledAt           DateTime?
+  currentPeriodStart   DateTime?           @map("current_period_start")
+  currentPeriodEnd     DateTime?           @map("current_period_end")
+  cancelAtPeriodEnd    Boolean             @default(false) @map("cancel_at_period_end")
+  canceledAt           DateTime?           @map("canceled_at")
   /// Polar refs — null on FREE plans. The webhook is the only writer.
-  polarSubscriptionId  String?             @unique
-  polarCustomerId      String?
-  polarCheckoutId      String?
+  polarSubscriptionId  String?             @unique @map("polar_subscription_id")
+  polarCustomerId      String?             @map("polar_customer_id")
+  polarCheckoutId      String?             @map("polar_checkout_id")
   /// Used by Business — billed seats. Free/individual plans = 1.
   seats                Int                 @default(1)
   /// Free-form for raw Polar payload, A/B flags, grant reasons, etc.
   metadata             Json?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
 
   usageMeters          UsageMeter[]
   addOns               AddOn[]
 
   @@index([status])
   @@index([polarCustomerId])
+  @@map("subscription")
 }
 
 /// Per-billing-period consumption. `period` is `YYYY-MM` (UTC) — one row
@@ -294,24 +308,25 @@ model Subscription {
 /// counters atomically.
 model UsageMeter {
   id              String        @id @default(cuid())
-  subscriptionId  String
+  subscriptionId  String        @map("subscription_id")
   subscription    Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   /// `YYYY-MM` for monthly counters. Date-stamps avoid clock-skew during
   /// period rollover — consult periodStart/periodEnd for the actual window.
   period          String
-  periodStart     DateTime
-  periodEnd       DateTime
-  manualRuns      Int           @default(0)
-  scheduledRuns   Int           @default(0)
-  emailAlerts     Int           @default(0)
-  smsAlerts       Int           @default(0)
-  whatsappAlerts  Int           @default(0)
-  csvExports      Int           @default(0)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  periodStart     DateTime      @map("period_start")
+  periodEnd       DateTime      @map("period_end")
+  manualRuns      Int           @default(0) @map("manual_runs")
+  scheduledRuns   Int           @default(0) @map("scheduled_runs")
+  emailAlerts     Int           @default(0) @map("email_alerts")
+  smsAlerts       Int           @default(0) @map("sms_alerts")
+  whatsappAlerts  Int           @default(0) @map("whatsapp_alerts")
+  csvExports      Int           @default(0) @map("csv_exports")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
 
   @@unique([subscriptionId, period])
   @@index([subscriptionId, periodEnd])
+  @@map("usage_meter")
 }
 
 /// Records of one-shot or recurring extras. Polar order/subscription drives
@@ -319,18 +334,19 @@ model UsageMeter {
 /// recurring extras (e.g. additional seats).
 model AddOn {
   id              String       @id @default(cuid())
-  subscriptionId  String
+  subscriptionId  String       @map("subscription_id")
   subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   kind            AddOnKind
   quantity        Int          @default(1)
   /// Remaining units for consumable packs (runs, SMS). null for recurring.
-  unitsRemaining  Int?
-  polarOrderId    String?      @unique
-  polarSubscriptionId String?
-  purchasedAt     DateTime     @default(now())
-  expiresAt       DateTime?
+  unitsRemaining  Int?         @map("units_remaining")
+  polarOrderId    String?      @unique @map("polar_order_id")
+  polarSubscriptionId String?  @map("polar_subscription_id")
+  purchasedAt     DateTime     @default(now()) @map("purchased_at")
+  expiresAt       DateTime?    @map("expires_at")
 
   @@index([subscriptionId, kind])
+  @@map("add_on")
 }
 
 /// Captures a user's intent to switch to a different (cheaper) plan at the
@@ -342,27 +358,28 @@ model AddOn {
 /// hit this table.
 model ScheduledPlanChange {
   id             String                    @id @default(cuid())
-  userId         String
+  userId         String                    @map("user_id")
   user           User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Snapshot of the plan the user was on at scheduling time — useful for
   /// audit and for the worker to detect "they already moved off this plan
   /// via another path, skip applying."
-  currentPlanId  String
+  currentPlanId  String                    @map("current_plan_id")
   currentPlan    Plan                      @relation("ScheduledChangeCurrent", fields: [currentPlanId], references: [id])
-  targetPlanId   String
+  targetPlanId   String                    @map("target_plan_id")
   targetPlan     Plan                      @relation("ScheduledChangeTarget", fields: [targetPlanId], references: [id])
-  targetInterval BillingInterval           @default(MONTH)
+  targetInterval BillingInterval           @default(MONTH) @map("target_interval")
   /// When the change becomes effective. Set to `Subscription.currentPeriodEnd`
   /// at write time, re-synced when Polar refreshes the period dates via
   /// webhook so we stay aligned with the source of truth.
-  scheduledFor   DateTime
+  scheduledFor   DateTime                  @map("scheduled_for")
   status         ScheduledPlanChangeStatus @default(PENDING)
-  appliedAt      DateTime?
-  canceledAt     DateTime?
+  appliedAt      DateTime?                 @map("applied_at")
+  canceledAt     DateTime?                 @map("canceled_at")
   metadata       Json?
-  createdAt      DateTime                  @default(now())
-  updatedAt      DateTime                  @updatedAt
+  createdAt      DateTime                  @default(now()) @map("created_at")
+  updatedAt      DateTime                  @updatedAt @map("updated_at")
 
   @@index([status, scheduledFor])
   @@index([userId, status])
+  @@map("scheduled_plan_change")
 }

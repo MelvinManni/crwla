@@ -112,18 +112,18 @@ export class SelfCheckService {
     try {
       const rows: Array<{ column_name: string }> = await this.prisma.$queryRawUnsafe(`
         SELECT column_name FROM information_schema.columns
-        WHERE table_name = 'Result' AND column_name = 'searchVector'
+        WHERE table_name = 'result' AND column_name = 'search_vector'
       `);
       if (!rows.length) {
         return {
           ok: false,
           reason:
-            'Result.searchVector column missing. Repair: re-run prisma migrations — `cd apps/api && npx prisma migrate deploy`.',
+            'result.search_vector column missing. Repair: re-run prisma migrations — `cd apps/api && npx prisma migrate deploy`.',
         };
       }
       return { ok: true };
     } catch (e) {
-      return { ok: false, reason: `Could not introspect Result schema: ${(e as Error).message}` };
+      return { ok: false, reason: `Could not introspect result schema: ${(e as Error).message}` };
     }
   }
 
@@ -131,13 +131,13 @@ export class SelfCheckService {
     try {
       const rows: Array<{ indexname: string }> = await this.prisma.$queryRawUnsafe(`
         SELECT indexname FROM pg_indexes
-        WHERE tablename = 'Result' AND indexname = 'idx_result_search_vector'
+        WHERE tablename = 'result' AND indexname = 'idx_result_search_vector'
       `);
       if (!rows.length) {
         return {
           ok: false,
           reason:
-            'GIN index idx_result_search_vector missing. Repair: `psql $DATABASE_URL -c "CREATE INDEX CONCURRENTLY idx_result_search_vector ON \\"Result\\" USING GIN (\\"searchVector\\");"`',
+            'GIN index idx_result_search_vector missing. Repair: `psql $DATABASE_URL -c "CREATE INDEX CONCURRENTLY idx_result_search_vector ON result USING GIN (search_vector);"`',
         };
       }
       return { ok: true };

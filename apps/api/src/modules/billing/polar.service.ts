@@ -239,6 +239,36 @@ export class PolarService {
     return polar.customerSessions.create(body as never);
   }
 
+  /**
+   * Look up the user's currently-active subscriptions on Polar by the
+   * external customer id (== local user id). Returns the first match — Polar
+   * only allows one active subscription per customer in normal flows. Used
+   * by the login-time reconciliation to recover paid users who got stuck on
+   * the local FREE tier (e.g. a webhook was missed during a deploy or the
+   * checkout returned the user before the `subscription.created` event
+   * arrived).
+   */
+  async findActiveSubscriptionByExternalId(
+    externalCustomerId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const polar = this.getClient();
+    const iter = await polar.subscriptions.list({
+      externalCustomerId,
+      active: true,
+      limit: 1,
+    } as never);
+    // Page iterators yield pages, each with `.result.items`. Take the first
+    // item from the first page; bail out before exhausting the iterator.
+    for await (const page of iter as AsyncIterable<{
+      result?: { items?: unknown[] };
+    }>) {
+      const items = page.result?.items ?? [];
+      if (items.length > 0) return items[0] as Record<string, unknown>;
+      break;
+    }
+    return null;
+  }
+
   // ---------- Webhook ------------------------------------------------
 
   /**

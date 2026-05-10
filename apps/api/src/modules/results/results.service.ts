@@ -14,6 +14,21 @@ function relTime(t: Date | null | undefined): string | null {
   return `${d}d ago`;
 }
 
+function timeWindowToCutoff(t: string | undefined): Date | null {
+  switch (t) {
+    case '24h':
+      return new Date(Date.now() - 24 * 60 * 60 * 1000);
+    case '7d':
+      return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    case '30d':
+      return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    case '90d':
+      return new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    default:
+      return null;
+  }
+}
+
 @Injectable()
 export class ResultsService {
   constructor(
@@ -30,38 +45,72 @@ export class ResultsService {
   async listFor(
     userId: string,
     searchId: string,
-    pagination: { page?: number; pageSize?: number } = {},
+    opts: {
+      page?: number;
+      pageSize?: number;
+      q?: string;
+      keyword?: string;
+      time?: string;
+    } = {},
   ) {
     const search = await this.ownedSearch(userId, searchId);
-    const page = Math.max(1, pagination.page ?? 1);
-    const pageSize = Math.min(200, Math.max(1, pagination.pageSize ?? 25));
+    const page = Math.max(1, opts.page ?? 1);
+    const pageSize = Math.min(200, Math.max(1, opts.pageSize ?? 25));
     const offset = (page - 1) * pageSize;
 
+    // Build the WHERE clause once and reuse for both COUNT and the page
+    // query so filters fire BEFORE LIMIT/OFFSET — otherwise filtering only
+    // narrows the already-paginated slice.
+    const conditions: string[] = ['search_id = $1', 'hidden = false'];
+    const values: unknown[] = [searchId];
+    let i = 2;
+    const q = opts.q?.trim();
+    if (q) {
+      conditions.push(
+        `(title ILIKE $${i} OR snippet ILIKE $${i} OR source ILIKE $${i})`,
+      );
+      values.push(`%${q}%`);
+      i++;
+    }
+    const keyword = opts.keyword?.trim();
+    if (keyword) {
+      conditions.push(`(title ILIKE $${i} OR snippet ILIKE $${i})`);
+      values.push(`%${keyword}%`);
+      i++;
+    }
+    const cutoff = timeWindowToCutoff(opts.time);
+    if (cutoff) {
+      conditions.push(`COALESCE(published_at, fetched_at) >= $${i}`);
+      values.push(cutoff);
+      i++;
+    }
+    const whereSql = conditions.join(' AND ');
+
     const totalRow: Array<{ count: bigint }> = await this.prisma.$queryRawUnsafe(
-      `SELECT count(*)::bigint AS count FROM "Result" WHERE "searchId" = $1 AND hidden = false`,
-      searchId,
+      `SELECT count(*)::bigint AS count FROM result WHERE ${whereSql}`,
+      ...values,
     );
     const total = Number(totalRow[0]?.count ?? 0);
 
-    // Order by COALESCE(publishedAt, fetchedAt) DESC — Prisma can't express
-    // this directly so use $queryRaw with the actual table/column casing.
+    // Order by COALESCE(published_at, fetched_at) DESC — Prisma can't express
+    // this directly so use $queryRaw against the snake_case table/column names.
     const rows: Array<{
       id: string;
       source: string;
       title: string;
       url: string;
       snippet: string | null;
-      imageUrl: string | null;
+      image_url: string | null;
       tag: string | null;
-      publishedAt: Date | null;
-      fetchedAt: Date;
+      published_at: Date | null;
+      fetched_at: Date;
     }> = await this.prisma.$queryRawUnsafe(
-      `SELECT id, source, title, url, snippet, "imageUrl", tag, "publishedAt", "fetchedAt"
-       FROM "Result"
-       WHERE "searchId" = $1 AND hidden = false
-       ORDER BY COALESCE("publishedAt", "fetchedAt") DESC
-       LIMIT $2 OFFSET $3`,
-      searchId,
+      `SELECT id, source, title, url, snippet, image_url, tag, published_at, fetched_at
+       FROM result
+       WHERE ${whereSql}
+       ORDER BY COALESCE(published_at, fetched_at) DESC
+       LIMIT $${i} OFFSET $${i + 1}`,
+      ...values,
       pageSize,
       offset,
     );
@@ -72,10 +121,10 @@ export class ResultsService {
       title: r.title,
       url: r.url,
       snippet: r.snippet,
-      image: r.imageUrl,
+      image: r.image_url,
       tag: r.tag,
-      time: relTime(r.publishedAt ?? r.fetchedAt),
-      publishedAt: r.publishedAt ? r.publishedAt.getTime() : null,
+      time: relTime(r.published_at ?? r.fetched_at),
+      publishedAt: r.published_at ? r.published_at.getTime() : null,
     }));
 
     return {
