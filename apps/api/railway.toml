@@ -5,10 +5,11 @@
 
 [build]
 builder = "RAILPACK"
-# Generate the Prisma client before nest build so the compiled output can
-# import @prisma/client. `npm ci` uses the committed lockfile for repeatable
-# installs.
-buildCommand = "npm ci && npx prisma generate && npm run build"
+# Lockfiles aren't committed in this repo, so use `npm install` (not `npm
+# ci` — that requires a perfectly synced lockfile). Prisma client is
+# generated before nest build so the compiled output can import
+# @prisma/client.
+buildCommand = "npm install && npx prisma generate && npm run build"
 
 [deploy]
 # `prisma migrate deploy` is idempotent and cheap on a no-op deploy, so
