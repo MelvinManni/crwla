@@ -12,6 +12,8 @@ import { ResultsModule } from './modules/results/results.module';
 import { SearchModule } from './modules/search/search.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
 import { ScraperModule } from './modules/scraper/scraper.module';
+import { SourcesModule } from './modules/sources/sources.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { FilterModule } from './modules/filter/filter.module';
 import { QueuesModule } from './queues/queues.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -31,6 +33,8 @@ import { TasksModule } from './tasks/tasks.module';
     SearchModule,
     AlertsModule,
     ScraperModule,
+    SourcesModule,
+    BillingModule,
     FilterModule,
     QueuesModule,
     TasksModule,

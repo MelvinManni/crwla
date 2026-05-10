@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { api } from '../../lib/api';
+import { colors, fonts, radii } from '../../lib/theme';
 
 type Req = { id: string; name: string; email: string; team: string; reason: string; requested: string };
 
@@ -43,38 +44,57 @@ export default function Admin() {
   if (loading) {
     return (
       <View style={[s.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.fg} />
       </View>
     );
   }
 
   return (
     <View style={s.container}>
-      <Text style={s.title}>Pending requests</Text>
+      <View style={s.appTop}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.h2}>Admin</Text>
+          <Text style={s.topSub}>
+            {items.length} PENDING REQUEST{items.length === 1 ? '' : 'S'}
+          </Text>
+        </View>
+      </View>
       <FlatList
         data={items}
         keyExtractor={(i) => i.id}
-        contentContainerStyle={{ padding: 12 }}
+        contentContainerStyle={{ padding: 12, paddingBottom: 120, gap: 8 }}
         renderItem={({ item }) => (
           <View style={s.card}>
-            <Text style={s.name}>{item.name}</Text>
-            <Text style={s.sub}>
-              {item.email} · {item.team} · {item.requested}
-            </Text>
+            <View>
+              <Text style={s.name}>{item.name}</Text>
+              <Text style={s.metaLine}>
+                <Text style={s.mono}>{item.email}</Text> · {item.team} · {item.requested}
+              </Text>
+            </View>
             {item.reason ? <Text style={s.reason}>{item.reason}</Text> : null}
-            <View style={s.buttons}>
-              <Pressable style={[s.btn, s.btnPrimary]} disabled={busy === item.id} onPress={() => approve(item.id)}>
+            <View style={s.actions}>
+              <Pressable
+                style={[s.btn, s.btnPrimary, busy === item.id && { opacity: 0.5 }]}
+                disabled={busy === item.id}
+                onPress={() => approve(item.id)}
+              >
                 <Text style={s.btnPrimaryText}>Approve</Text>
               </Pressable>
-              <Pressable style={[s.btn, s.btnGhost]} disabled={busy === item.id} onPress={() => deny(item.id)}>
-                <Text style={s.btnGhostText}>Deny</Text>
+              <Pressable
+                style={[s.btn, s.btnSecondary, busy === item.id && { opacity: 0.5 }]}
+                disabled={busy === item.id}
+                onPress={() => deny(item.id)}
+              >
+                <Text style={s.btnSecondaryText}>Deny</Text>
               </Pressable>
             </View>
           </View>
         )}
         ListEmptyComponent={
-          <View style={{ padding: 40, alignItems: 'center' }}>
-            <Text style={{ color: '#777' }}>No pending requests.</Text>
+          <View style={{ padding: 48, alignItems: 'center' }}>
+            <Text style={{ color: colors.fgMuted, fontFamily: fonts.sans, fontSize: 13 }}>
+              No pending requests.
+            </Text>
           </View>
         }
       />
@@ -83,16 +103,33 @@ export default function Admin() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  title: { fontSize: 20, fontWeight: '600', color: '#111', padding: 16, paddingTop: 56 },
-  card: { padding: 14, borderWidth: 1, borderColor: '#eee', borderRadius: 12, marginBottom: 8 },
-  name: { fontWeight: '500', color: '#111', fontSize: 15 },
-  sub: { color: '#777', fontSize: 12, marginTop: 2 },
-  reason: { marginTop: 6, fontSize: 13, color: '#333' },
-  buttons: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  btn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  btnPrimary: { backgroundColor: '#111' },
-  btnPrimaryText: { color: '#fff', fontSize: 13, fontWeight: '500' },
-  btnGhost: { borderWidth: 1, borderColor: '#e5e5e5' },
-  btnGhostText: { color: '#111', fontSize: 13 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  appTop: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingTop: 56,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  h2: { fontSize: 18, fontFamily: fonts.sansSemibold, color: colors.fg, letterSpacing: -0.2 },
+  topSub: { fontFamily: fonts.mono, fontSize: 11, color: colors.fgSubtle, marginTop: 2, letterSpacing: 0.4 },
+  card: {
+    backgroundColor: colors.bgElev,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.card,
+    padding: 16,
+    gap: 12,
+  },
+  name: { fontFamily: fonts.sansSemibold, color: colors.fg, fontSize: 15, letterSpacing: -0.1 },
+  metaLine: { fontFamily: fonts.sans, fontSize: 12, color: colors.fgMuted, marginTop: 4 },
+  mono: { fontFamily: fonts.mono },
+  reason: { fontSize: 13, color: colors.fg, fontFamily: fonts.sans, lineHeight: 19 },
+  actions: { flexDirection: 'row', gap: 8 },
+  btn: { flex: 1, paddingVertical: 10, borderRadius: radii.lg, alignItems: 'center' },
+  btnPrimary: { backgroundColor: colors.accent },
+  btnPrimaryText: { color: colors.accentFg, fontSize: 13, fontFamily: fonts.sansMedium },
+  btnSecondary: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgElev },
+  btnSecondaryText: { color: colors.fg, fontSize: 13, fontFamily: fonts.sansMedium },
 });

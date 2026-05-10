@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
@@ -18,8 +18,15 @@ export class ResultsController {
   constructor(private readonly results: ResultsService) {}
 
   @Get('results')
-  list(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.results.listFor(user.id, id);
+  list(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Query('page') pageRaw?: string,
+    @Query('pageSize') pageSizeRaw?: string,
+  ) {
+    const page = pageRaw ? Number(pageRaw) : undefined;
+    const pageSize = pageSizeRaw ? Number(pageSizeRaw) : undefined;
+    return this.results.listFor(user.id, id, { page, pageSize });
   }
 
   @Post('filter')

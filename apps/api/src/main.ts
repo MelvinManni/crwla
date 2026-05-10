@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as express from 'express';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -13,6 +14,19 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: false });
   const config = app.get(ConfigService);
 
+  // Capture rawBody for the Polar webhook so signatures can be verified.
+  // The verifier needs the exact bytes — once express.json() has parsed and
+  // re-stringified, the signature is invalid.
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req: express.Request & { rawBody?: Buffer }, _res, buf) => {
+        if (req.originalUrl?.endsWith('/billing/webhook')) {
+          req.rawBody = Buffer.from(buf);
+        }
+      },
+    }),
+  );
   app.use(cookieParser());
   app.enableCors({
     origin: config.get<string>('CORS_ORIGIN', 'http://localhost:3000'),

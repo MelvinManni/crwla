@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Bell, LayoutDashboard, LogOut, Plus, Search, Shield, Users } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Bell, CreditCard, LayoutDashboard, LogOut, Plus, Search, Shield, Tag, Users } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -15,26 +15,41 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/types';
-import { useRouter } from 'next/navigation';
 
-type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  count?: number;
+};
 
 const NAV_PRIMARY: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Searches', icon: LayoutDashboard },
   { href: '/searches/new', label: 'New search', icon: Plus },
-  { href: '/search', label: 'Search results', icon: Search },
+  { href: '/search', label: 'Recent results', icon: Search },
   { href: '/alerts', label: 'Alerts', icon: Bell },
+  { href: '/billing', label: 'Billing', icon: CreditCard },
 ];
 
 const NAV_ADMIN: NavItem[] = [
   { href: '/admin', label: 'Access requests', icon: Shield },
   { href: '/admin/users', label: 'Members', icon: Users },
+  { href: '/admin/billing', label: 'Plans & Pricing', icon: Tag },
 ];
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
 
 export function AppSidebar({ user }: { user: SessionUser }) {
   const pathname = usePathname();
@@ -52,30 +67,44 @@ export function AppSidebar({ user }: { user: SessionUser }) {
   }
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1.5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground font-mono text-xs">
+    <Sidebar collapsible="icon" className="border-r border-border">
+      <SidebarHeader className="px-3 pt-4 pb-3">
+        <div className="flex items-center gap-2.5 px-1">
+          <div
+            className={cn(
+              'grid h-7 w-7 shrink-0 place-items-center rounded-md bg-fg font-mono text-[13px] font-semibold text-bg-elev',
+            )}
+          >
             CR
           </div>
-          <span className="font-semibold group-data-[collapsible=icon]:hidden">CRWLA</span>
+          <span className="text-[15px] font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+            CRWLA
+          </span>
         </div>
       </SidebarHeader>
 
-      <SidebarSeparator />
-
-      <SidebarContent>
+      <SidebarContent className="px-2">
         <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-2 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">
+            Workspace
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {NAV_PRIMARY.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
-                    <Link href={item.href}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </Link>
+                  <SidebarMenuButton
+                    render={<Link href={item.href} />}
+                    isActive={isActive(item.href)}
+                    tooltip={item.label}
+                    className="h-7 gap-2.5 px-2 text-[13px] text-fg-muted data-[active=true]:bg-bg-sunk data-[active=true]:font-medium data-[active=true]:text-fg hover:bg-bg-sunk hover:text-fg"
+                  >
+                    <item.icon className="h-3.5 w-3.5" />
+                    <span>{item.label}</span>
+                    {typeof item.count === 'number' && (
+                      <span className="ml-auto font-mono text-[10px] text-fg-subtle">
+                        {item.count}
+                      </span>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -85,16 +114,21 @@ export function AppSidebar({ user }: { user: SessionUser }) {
 
         {user.role === 'ADMIN' && (
           <SidebarGroup>
-            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarGroupLabel className="px-2 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">
+              Admin
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {NAV_ADMIN.map((item) => (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
-                      <Link href={item.href}>
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.label}</span>
-                      </Link>
+                    <SidebarMenuButton
+                      render={<Link href={item.href} />}
+                      isActive={isActive(item.href)}
+                      tooltip={item.label}
+                      className="h-7 gap-2.5 px-2 text-[13px] text-fg-muted data-[active=true]:bg-bg-sunk data-[active=true]:font-medium data-[active=true]:text-fg hover:bg-bg-sunk hover:text-fg"
+                    >
+                      <item.icon className="h-3.5 w-3.5" />
+                      <span>{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -104,25 +138,26 @@ export function AppSidebar({ user }: { user: SessionUser }) {
         )}
       </SidebarContent>
 
-      <SidebarFooter>
-        <div className="flex items-center gap-2 px-2 py-1 text-xs group-data-[collapsible=icon]:hidden">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium">
-            {user.name
-              .split(' ')
-              .map((p) => p[0])
-              .slice(0, 2)
-              .join('')
-              .toUpperCase()}
+      <SidebarFooter className="border-t border-border px-3 py-3">
+        <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:hidden">
+          <div className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full border border-border bg-bg-sunk text-[11px] font-medium text-fg-muted">
+            {initials(user.name)}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate font-medium text-foreground">{user.name}</div>
-            <div className="truncate text-muted-foreground">{user.email}</div>
+            <div className="truncate text-[12px] font-medium text-fg">{user.name}</div>
+            <div className="truncate font-mono text-[10px] text-fg-muted">
+              {user.role.toLowerCase()}
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={signOut}
+            aria-label="Sign out"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-border bg-bg-elev text-fg hover:bg-bg-sunk"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+          </button>
         </div>
-        <Button variant="ghost" size="sm" className="justify-start gap-2" onClick={signOut}>
-          <LogOut className="h-4 w-4" />
-          <span className="group-data-[collapsible=icon]:hidden">Sign out</span>
-        </Button>
       </SidebarFooter>
 
       <SidebarRail />

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AlertFrequency, Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { EntitlementsService } from '../billing/entitlements.service';
 
 export type CreateAlertInput = {
   searchId?: string | null;
@@ -12,17 +13,38 @@ export type CreateAlertInput = {
 
 @Injectable()
 export class AlertsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
-  async listForUser(userId: string) {
-    const rows = await this.prisma.alert.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    });
-    return rows;
+  async listForUser(
+    userId: string,
+    pagination: { page?: number; pageSize?: number } = {},
+  ) {
+    const page = Math.max(1, pagination.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, pagination.pageSize ?? 20));
+    const where = { userId };
+    const [total, rows] = await Promise.all([
+      this.prisma.alert.count({ where }),
+      this.prisma.alert.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+    return {
+      items: rows,
+      total,
+      page,
+      pageSize,
+      hasMore: page * pageSize < total,
+    };
   }
 
   async create(userId: string, input: CreateAlertInput) {
+    await this.entitlements.assertCanCreateAlert(userId);
     return this.prisma.alert.create({
       data: {
         userId,

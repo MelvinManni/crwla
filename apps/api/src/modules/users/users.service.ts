@@ -32,6 +32,7 @@ export class UsersService {
       role: u.role === Role.ADMIN ? 'Admin' : 'Member',
       last: relTime(u.lastActiveAt ?? u.createdAt),
       active: u.active,
+      disabledSourceCategories: u.disabledSourceCategories,
     }));
   }
 
@@ -55,13 +56,27 @@ export class UsersService {
     return { ok: true, id: created.id };
   }
 
-  async patch(id: string, input: { active?: boolean; role?: 'admin' | 'member' }) {
+  async patch(
+    id: string,
+    input: {
+      active?: boolean;
+      role?: 'admin' | 'member';
+      disabledSourceCategories?: string[];
+    },
+  ) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('not found');
-    const data: { active?: boolean; role?: Role } = {};
+    const data: { active?: boolean; role?: Role; disabledSourceCategories?: string[] } = {};
     if (typeof input.active === 'boolean') data.active = input.active;
     if (input.role === 'admin') data.role = Role.ADMIN;
     if (input.role === 'member') data.role = Role.MEMBER;
+    if (Array.isArray(input.disabledSourceCategories)) {
+      // Whitelist filter — only known SourceCategory values land in the column.
+      const allowed = new Set(['news', 'social', 'forums', 'blogs']);
+      data.disabledSourceCategories = input.disabledSourceCategories.filter((c) =>
+        allowed.has(c),
+      );
+    }
     if (Object.keys(data).length) {
       await this.prisma.user.update({ where: { id }, data });
     }

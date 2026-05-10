@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -23,9 +24,16 @@ export class SearchesController {
   constructor(private readonly searches: SearchesService) {}
 
   @Get()
-  async list(@CurrentUser() user: AuthenticatedUser) {
-    const jobs = await this.searches.listForUser(user.id);
-    return { jobs }; // key kept as `jobs` for backward-compatible UI
+  async list(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('page') pageRaw?: string,
+    @Query('pageSize') pageSizeRaw?: string,
+  ) {
+    const page = pageRaw ? Number(pageRaw) : undefined;
+    const pageSize = pageSizeRaw ? Number(pageSizeRaw) : undefined;
+    const out = await this.searches.listForUser(user.id, { page, pageSize });
+    // `jobs` kept for backward-compatible UI; new clients read `items` + meta.
+    return { jobs: out.items, ...out };
   }
 
   @Post()

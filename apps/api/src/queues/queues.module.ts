@@ -7,9 +7,13 @@ import { SearchIndexQueue } from './search-index/search-index.queue';
 import { SearchIndexProcessor } from './search-index/search-index.processor';
 import { ScraperModule } from '../modules/scraper/scraper.module';
 import { FilterModule } from '../modules/filter/filter.module';
-import { SCRAPE_QUEUE, SEARCH_INDEX_QUEUE } from './queue-names';
+import {
+  SCHEDULED_PLAN_CHANGES_QUEUE,
+  SCRAPE_QUEUE,
+  SEARCH_INDEX_QUEUE,
+} from './queue-names';
 
-export { SCRAPE_QUEUE, SEARCH_INDEX_QUEUE };
+export { SCRAPE_QUEUE, SEARCH_INDEX_QUEUE, SCHEDULED_PLAN_CHANGES_QUEUE };
 
 @Module({
   imports: [
@@ -31,11 +35,20 @@ export { SCRAPE_QUEUE, SEARCH_INDEX_QUEUE };
         };
       },
     }),
-    BullModule.registerQueue({ name: SCRAPE_QUEUE }, { name: SEARCH_INDEX_QUEUE }),
+    // The `scheduled-plan-changes` queue is registered here too so any
+    // module can `@InjectQueue(SCHEDULED_PLAN_CHANGES_QUEUE)`. The wrapper
+    // service + processor live in BillingModule (not here) because the
+    // processor depends on BillingService — keeping the dep edge there
+    // avoids a Queues↔Billing import cycle.
+    BullModule.registerQueue(
+      { name: SCRAPE_QUEUE },
+      { name: SEARCH_INDEX_QUEUE },
+      { name: SCHEDULED_PLAN_CHANGES_QUEUE },
+    ),
     ScraperModule,
     FilterModule,
   ],
   providers: [ScrapeQueue, ScrapeProcessor, SearchIndexQueue, SearchIndexProcessor],
-  exports: [ScrapeQueue, SearchIndexQueue],
+  exports: [ScrapeQueue, SearchIndexQueue, BullModule],
 })
 export class QueuesModule {}

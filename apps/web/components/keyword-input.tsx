@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { KeywordChip } from '@/components/keyword-chip';
 import { cn } from '@/lib/utils';
 
 export function KeywordInput({
@@ -32,28 +32,18 @@ export function KeywordInput({
   return (
     <div
       className={cn(
-        'flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border border-input bg-background px-2 py-1.5 text-sm shadow-sm focus-within:ring-1 focus-within:ring-ring',
+        'flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border border-border bg-bg-elev p-2',
+        'focus-within:border-fg focus-within:shadow-[0_0_0_3px_rgba(0,0,0,0.04)]',
         className,
       )}
     >
       {value.map((k) => (
-        <span
-          key={k}
-          className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-xs"
-        >
+        <KeywordChip key={k} onRemove={() => remove(k)}>
           {k}
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={() => remove(k)}
-            aria-label={`remove ${k}`}
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </span>
+        </KeywordChip>
       ))}
       <input
-        className="min-w-[120px] flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+        className="min-w-[100px] flex-1 bg-transparent p-1 font-mono text-[13px] text-fg outline-none placeholder:text-fg-subtle"
         value={text}
         onChange={(e) => {
           const v = e.target.value;

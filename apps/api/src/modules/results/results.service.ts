@@ -27,8 +27,21 @@ export class ResultsService {
     return s;
   }
 
-  async listFor(userId: string, searchId: string, limit = 200) {
+  async listFor(
+    userId: string,
+    searchId: string,
+    pagination: { page?: number; pageSize?: number } = {},
+  ) {
     const search = await this.ownedSearch(userId, searchId);
+    const page = Math.max(1, pagination.page ?? 1);
+    const pageSize = Math.min(200, Math.max(1, pagination.pageSize ?? 25));
+    const offset = (page - 1) * pageSize;
+
+    const totalRow: Array<{ count: bigint }> = await this.prisma.$queryRawUnsafe(
+      `SELECT count(*)::bigint AS count FROM "Result" WHERE "searchId" = $1 AND hidden = false`,
+      searchId,
+    );
+    const total = Number(totalRow[0]?.count ?? 0);
 
     // Order by COALESCE(publishedAt, fetchedAt) DESC — Prisma can't express
     // this directly so use $queryRaw with the actual table/column casing.
@@ -47,10 +60,23 @@ export class ResultsService {
        FROM "Result"
        WHERE "searchId" = $1 AND hidden = false
        ORDER BY COALESCE("publishedAt", "fetchedAt") DESC
-       LIMIT $2`,
+       LIMIT $2 OFFSET $3`,
       searchId,
-      limit,
+      pageSize,
+      offset,
     );
+
+    const results = rows.map((r) => ({
+      id: r.id,
+      source: r.source,
+      title: r.title,
+      url: r.url,
+      snippet: r.snippet,
+      image: r.imageUrl,
+      tag: r.tag,
+      time: relTime(r.publishedAt ?? r.fetchedAt),
+      publishedAt: r.publishedAt ? r.publishedAt.getTime() : null,
+    }));
 
     return {
       job: {
@@ -62,22 +88,18 @@ export class ResultsService {
         keywords: search.keywords,
         lastRun: relTime(search.lastRunAt) ?? 'never',
       },
-      results: rows.map((r) => ({
-        id: r.id,
-        source: r.source,
-        title: r.title,
-        url: r.url,
-        snippet: r.snippet,
-        image: r.imageUrl,
-        tag: r.tag,
-        time: relTime(r.publishedAt ?? r.fetchedAt),
-        publishedAt: r.publishedAt ? r.publishedAt.getTime() : null,
-      })),
+      // legacy and canonical keys
+      results,
+      items: results,
+      total,
+      page,
+      pageSize,
+      hasMore: page * pageSize < total,
     };
   }
 
   async filterPrompt(userId: string, searchId: string, prompt: string) {
-    const view = await this.listFor(userId, searchId);
+    const view = await this.listFor(userId, searchId, { pageSize: 200 });
     const items: FilterItem[] = view.results.map((r) => ({
       id: r.id,
       title: r.title,

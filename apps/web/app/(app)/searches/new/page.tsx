@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -11,17 +11,37 @@ import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
 import { KeywordInput } from '@/components/keyword-input';
 import { CronPicker } from '@/components/cron-picker';
+import { useEntitlements } from '@/components/billing/entitlements-provider';
 import { api } from '@/lib/api';
 import type { CronPreset, SearchView } from '@/lib/types';
 
+const CRON_PRIORITY: CronPreset[] = ['HOURLY', 'DAILY', 'WEEKLY', 'MANUAL'];
+const CATEGORY_LABEL: Record<string, string> = {
+  news: 'News',
+  social: 'Social',
+  forums: 'Forums',
+  blogs: 'Blogs',
+};
+
+function pickDefaultCron(allowed: ReadonlyArray<string> | undefined): CronPreset {
+  if (!allowed || allowed.length === 0) return 'DAILY';
+  return CRON_PRIORITY.find((p) => allowed.includes(p)) ?? 'MANUAL';
+}
+
 export default function NewSearchPage() {
   const router = useRouter();
+  const { ent } = useEntitlements();
   const [name, setName] = useState('');
   const [keywords, setKeywords] = useState<string[]>([]);
   const [cron, setCron] = useState<CronPreset>('DAILY');
+  const [cronTouched, setCronTouched] = useState(false);
   const [filterPrompt, setFilterPrompt] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!cronTouched && ent) setCron(pickDefaultCron(ent.limits.cron));
+  }, [ent, cronTouched]);
 
   async function save() {
     setError(null);
@@ -35,7 +55,7 @@ export default function NewSearchPage() {
         cron,
         filterPrompt,
       });
-      router.push(`/searches/${out.job.id}`);
+      router.push(`/searches/${out.job.id}` as never);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -43,14 +63,16 @@ export default function NewSearchPage() {
     }
   }
 
+  // Sources are server-derived from the user's plan. Show a read-only
+  // summary so the user knows what's about to run.
+  const allowed = ent?.limits.allowedSourceCategories ?? [];
+
   return (
     <div className="mx-auto px-4 py-6 md:px-8">
       <div className="mb-6 flex items-center justify-between">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/dashboard">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Link>
+        <Button render={<Link href="/dashboard" />} variant="ghost" size="sm">
+          <ArrowLeft className="h-4 w-4" />
+          Back
         </Button>
         <Button size="sm" onClick={save} disabled={busy}>
           {busy ? <Spinner /> : 'Save'}
@@ -79,8 +101,42 @@ export default function NewSearchPage() {
         </div>
 
         <div className="space-y-1.5">
+          <Label>Sources</Label>
+          <div className="rounded-lg border border-border bg-bg-elev px-3 py-2.5">
+            {allowed.length === 0 ? (
+              <p className="font-mono text-[11px] text-fg-subtle">Loading…</p>
+            ) : (
+              <>
+                <p className="text-[12px] text-fg">
+                  Your <span className="font-medium">{ent?.plan.name ?? ''}</span> plan covers{' '}
+                  {allowed.map((c, i) => (
+                    <span key={c}>
+                      <span className="font-mono text-[11px] text-fg">
+                        {CATEGORY_LABEL[c] ?? c}
+                      </span>
+                      {i < allowed.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                  .
+                </p>
+                <p className="mt-1 font-mono text-[11px] text-fg-subtle">
+                  Sources are determined by your subscription. Upgrade your plan to add more
+                  source categories.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
           <Label>Schedule</Label>
-          <CronPicker value={cron} onChange={setCron} />
+          <CronPicker
+            value={cron}
+            onChange={(next) => {
+              setCronTouched(true);
+              setCron(next);
+            }}
+          />
         </div>
 
         <div className="space-y-1.5">

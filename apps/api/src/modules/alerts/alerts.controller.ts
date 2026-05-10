@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { IsArray, IsBoolean, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { AlertFrequency } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -24,8 +24,15 @@ export class AlertsController {
   constructor(private readonly svc: AlertsService) {}
 
   @Get()
-  async list(@CurrentUser() user: AuthenticatedUser) {
-    return { alerts: await this.svc.listForUser(user.id) };
+  async list(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('page') pageRaw?: string,
+    @Query('pageSize') pageSizeRaw?: string,
+  ) {
+    const page = pageRaw ? Number(pageRaw) : undefined;
+    const pageSize = pageSizeRaw ? Number(pageSizeRaw) : undefined;
+    const out = await this.svc.listForUser(user.id, { page, pageSize });
+    return { alerts: out.items, ...out };
   }
 
   @Post()

@@ -27,6 +27,12 @@ export const envValidationSchema = Joi.object({
 
   ANTHROPIC_API_KEY: Joi.string().optional().allow(''),
   ANTHROPIC_MODEL: Joi.string().default('claude-haiku-4-5-20251001'),
+
+  // --- Billing
+  WEB_BASE_URL: Joi.string().uri().default('http://localhost:3000'),
+  POLAR_ACCESS_TOKEN: Joi.string().optional().allow(''),
+  POLAR_SERVER: Joi.string().valid('sandbox', 'production').default('sandbox'),
+  POLAR_WEBHOOK_SECRET: Joi.string().optional().allow(''),
 });
 
 export type EnvVars = {

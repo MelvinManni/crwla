@@ -2,6 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CronPreset, Prisma, Search, SearchStatus } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { ScrapeQueue } from '../../queues/scrape/scrape.queue';
+import { SourceRegistry } from '../scraper/sources/source.registry';
+import { DEFAULT_SOURCES } from '../scraper/sources/source.types';
+import { EntitlementsService } from '../billing/entitlements.service';
 import { CreateSearchDto } from './dto/create-search.dto';
 import { UpdateSearchDto } from './dto/update-search.dto';
 
@@ -68,15 +71,34 @@ export class SearchesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly scrapeQueue: ScrapeQueue,
+    private readonly registry: SourceRegistry,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
-  async listForUser(userId: string) {
-    const rows = await this.prisma.search.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { results: { where: { hidden: false } } } } },
-    });
-    return rows.map(shape);
+  async listForUser(
+    userId: string,
+    pagination: { page?: number; pageSize?: number } = {},
+  ) {
+    const page = Math.max(1, pagination.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, pagination.pageSize ?? 20));
+    const where = { userId };
+    const [total, rows] = await Promise.all([
+      this.prisma.search.count({ where }),
+      this.prisma.search.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: { _count: { select: { results: { where: { hidden: false } } } } },
+      }),
+    ]);
+    return {
+      items: rows.map(shape),
+      total,
+      page,
+      pageSize,
+      hasMore: page * pageSize < total,
+    };
   }
 
   private async getOwned(userId: string, id: string) {
@@ -93,13 +115,23 @@ export class SearchesService {
   }
 
   async create(userId: string, dto: CreateSearchDto) {
+    // Plan-limit gates fire first.
+    await this.entitlements.assertCanCreateSearch(userId);
+    await this.entitlements.assertCanAddKeywords(userId, dto.keywords.length);
+    await this.entitlements.assertCronAllowed(userId, dto.cron);
+
+    // Sources are derived server-side from the user's plan + admin denylist
+    // — clients no longer pick them. Snapshot the resolved set onto the
+    // search row so a future plan change doesn't silently mutate what runs.
+    const sources = await this.derivedSourcesForUser(userId);
+
     const created = await this.prisma.search.create({
       data: {
         userId,
         name: dto.name.trim(),
         keywords: dto.keywords,
         locations: dto.locations ?? [],
-        sources: dto.sources ?? [],
+        sources,
         cron: dto.cron,
         filterPrompt: dto.filterPrompt ?? null,
         status: SearchStatus.RUNNING,
@@ -109,13 +141,43 @@ export class SearchesService {
     return shape({ ...created, _count: { results: 0 } });
   }
 
+  /**
+   * Resolve the sources a user is currently entitled to:
+   *   plan.allowedSourceCategories ∩ available registry ∖ user.disabledSourceCategories
+   *
+   * Falls back to DEFAULT_SOURCES (Google News only) if the plan can't be
+   * loaded — the user always gets a working search even if billing is in a
+   * weird state.
+   */
+  private async derivedSourcesForUser(userId: string): Promise<string[]> {
+    try {
+      const ent = await this.entitlements.ensureFor(userId);
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { disabledSourceCategories: true },
+      });
+      const ids = this.registry.idsForUser({
+        allowedCategories: ent.limits.allowedSourceCategories ?? [],
+        deniedCategories: user?.disabledSourceCategories ?? [],
+      });
+      return ids.length > 0 ? ids : [...DEFAULT_SOURCES];
+    } catch {
+      return [...DEFAULT_SOURCES];
+    }
+  }
+
   async update(userId: string, id: string, dto: UpdateSearchDto) {
     const existing = await this.getOwned(userId, id);
+    if (Array.isArray(dto.keywords)) {
+      await this.entitlements.assertCanAddKeywords(userId, dto.keywords.length);
+    }
+    if (dto.cron) {
+      await this.entitlements.assertCronAllowed(userId, dto.cron);
+    }
     const data: Prisma.SearchUpdateInput = {};
     if (typeof dto.name === 'string') data.name = dto.name.trim();
     if (Array.isArray(dto.keywords)) data.keywords = dto.keywords;
     if (Array.isArray(dto.locations)) data.locations = dto.locations;
-    if (Array.isArray(dto.sources)) data.sources = dto.sources;
     if (typeof dto.filterPrompt === 'string') data.filterPrompt = dto.filterPrompt;
     if (dto.cron) data.cron = dto.cron;
     if (dto.status) data.status = dto.status;
@@ -142,6 +204,9 @@ export class SearchesService {
 
   async runNow(userId: string, id: string) {
     const existing = await this.getOwned(userId, id);
+    // Consume one manual-run from the user's monthly quota (or a paid run
+    // pack). Throws ForbiddenException with PLAN_LIMIT_EXCEEDED on quota.
+    await this.entitlements.consumeManualRun(userId);
     return this.scrapeQueue.runNow(existing.id);
   }
 }

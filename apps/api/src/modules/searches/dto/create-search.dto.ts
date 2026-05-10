@@ -26,8 +26,7 @@ export class CreateSearchDto {
   @IsString({ each: true })
   locations?: string[];
 
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  sources?: string[];
+  // `sources` is no longer accepted from the client — the API derives it
+  // from the user's active plan + admin denylist at create time. Existing
+  // searches keep whatever sources they were created with until edited.
 }

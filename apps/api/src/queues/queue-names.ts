@@ -4,3 +4,4 @@
 // dependency detected" error at scan time).
 export const SCRAPE_QUEUE = 'scrape';
 export const SEARCH_INDEX_QUEUE = 'search-index';
+export const SCHEDULED_PLAN_CHANGES_QUEUE = 'scheduled-plan-changes';

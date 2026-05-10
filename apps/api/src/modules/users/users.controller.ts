@@ -1,5 +1,14 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
 import { UsersService } from './users.service';
@@ -15,6 +24,11 @@ class CreateUserDto {
 class PatchUserDto {
   @IsOptional() @IsBoolean() active?: boolean;
   @IsOptional() @IsIn(['admin', 'member']) role?: 'admin' | 'member';
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsIn(['news', 'social', 'forums', 'blogs'], { each: true })
+  disabledSourceCategories?: string[];
 }
 
 @UseGuards(JwtAuthGuard, AdminGuard)

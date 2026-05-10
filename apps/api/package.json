@@ -18,7 +18,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "es:bootstrap": "ts-node -r tsconfig-paths/register scripts/es-bootstrap.ts",
-    "self-check": "ts-node -r tsconfig-paths/register scripts/self-check.ts"
+    "self-check": "ts-node -r tsconfig-paths/register scripts/self-check.ts",
+    "thumbnails:backfill": "ts-node -r tsconfig-paths/register scripts/thumbnails-backfill.ts"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.13.0",
@@ -31,6 +32,7 @@
     "@nestjs/platform-express": "^10.3.0",
     "@nestjs/swagger": "^7.3.0",
     "@nestjs/throttler": "^6.0.0",
+    "@polar-sh/sdk": "^0.47.1",
     "@prisma/client": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.0.0",
@@ -70,11 +72,19 @@
     "typescript": "^5.4.0"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "transform": { "^.+\\.(t|j)s$": "ts-jest" },
-    "collectCoverageFrom": ["**/*.(t|j)s"],
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   }

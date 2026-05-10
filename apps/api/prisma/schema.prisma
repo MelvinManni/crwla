@@ -50,6 +50,41 @@ enum AlertFrequency {
   DAILY
 }
 
+enum PlanTier {
+  FREE
+  STARTER
+  BASIC
+  PRO
+  BUSINESS
+}
+
+enum BillingInterval {
+  MONTH
+  YEAR
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  UNPAID
+}
+
+enum AddOnKind {
+  EXTRA_RUN_PACK   // 30 manual runs / pack
+  EXTRA_SMS_PACK   // 200 SMS / pack
+  EXTRA_SEAT       // recurring; tracked as quantity
+}
+
+enum ScheduledPlanChangeStatus {
+  PENDING
+  APPLIED
+  CANCELED
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
@@ -62,8 +97,16 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  searches Search[]
-  alerts   Alert[]
+  /// Source categories this user is *not* allowed to crawl. Empty = all
+  /// categories enabled. Values are SourceCategory strings (e.g. "social",
+  /// "forums"). Validated at search-create time and re-checked in the
+  /// scrape processor so a denylist change pauses live crawls too.
+  disabledSourceCategories String[] @default([])
+
+  searches         Search[]
+  alerts           Alert[]
+  subscription     Subscription?
+  scheduledChanges ScheduledPlanChange[]
 }
 
 model AccessRequest {
@@ -140,7 +183,12 @@ model Result {
   hidden      Boolean   @default(false)
   metadata    Json?
 
-  // searchVector tsvector — added in raw-SQL migration. GIN index in same.
+  /// `searchVector tsvector GENERATED ALWAYS AS (...) STORED` is added by
+  /// the raw-SQL migration `20260503_init_fts/migration.sql`. Declared here
+  /// as `Unsupported` so `prisma migrate dev` doesn't drift-detect and try
+  /// to drop it. The Prisma client never reads/writes this column directly
+  /// — full-text search uses `$queryRaw` (see ResultsService / SearchService).
+  searchVector Unsupported("tsvector")?
 
   @@unique([searchId, urlHash])
   @@index([searchId, fetchedAt(sort: Desc)])
@@ -163,4 +211,158 @@ model Alert {
   createdAt     DateTime       @default(now())
 
   @@index([userId, active])
+}
+
+/// Plan rows are admin-managed at runtime — name/price/limits/features are
+/// all editable from /admin/billing. Polar product + price ids are populated
+/// by the server: `PolarService.syncPlan()` creates the product on first save
+/// and updates it on subsequent saves, then writes the returned ids back.
+///
+/// `tier` is the unique behaviour class — one row per tier. Archive uses
+/// the existing `active=false` flag; subscribers on the archived plan keep
+/// it until they upgrade/downgrade because `Subscription.planId` is a hard FK.
+model Plan {
+  id                  String           @id @default(cuid())
+  tier                PlanTier         @unique
+  name                String
+  description         String?
+  priceMonthlyCents   Int              @default(0)
+  priceYearlyCents    Int              @default(0)
+  /// Polar uses one `recurring_interval` per product, so a plan that
+  /// offers both monthly and yearly billing needs two products. Both ids
+  /// are filled by PolarService.syncPlan() on save (or null for drafts /
+  /// FREE / when Polar is not configured).
+  ///
+  /// `polarProductId` is kept for backwards compat — currently aliased to
+  /// the monthly product. New code should read `polarProductMonthlyId`.
+  polarProductId        String?
+  polarProductMonthlyId String?
+  polarProductYearlyId  String?
+  /// Per-product default price ids — informational. Checkout passes the
+  /// product id; Polar uses the product's current price automatically.
+  polarPriceMonthlyId   String?
+  polarPriceYearlyId    String?
+  /// JSON snapshot of limits + features for the FE. See `PlanLimits` in the
+  /// catalogue file for the canonical shape.
+  limits              Json
+  features            Json             @default("[]")
+  /// false = archived; hidden from pickers, Polar product archived too.
+  active              Boolean          @default(true)
+  sortOrder           Int              @default(0)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  subscriptions       Subscription[]
+  scheduledChangesAsCurrent ScheduledPlanChange[] @relation("ScheduledChangeCurrent")
+  scheduledChangesAsTarget  ScheduledPlanChange[] @relation("ScheduledChangeTarget")
+}
+
+/// One row per user (or team). `userId` is unique — upgrade/downgrade
+/// mutates the existing row; canceled subs stay around for history.
+model Subscription {
+  id                   String              @id @default(cuid())
+  userId               String              @unique
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId               String
+  plan                 Plan                @relation(fields: [planId], references: [id])
+  status               SubscriptionStatus  @default(ACTIVE)
+  interval             BillingInterval     @default(MONTH)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean             @default(false)
+  canceledAt           DateTime?
+  /// Polar refs — null on FREE plans. The webhook is the only writer.
+  polarSubscriptionId  String?             @unique
+  polarCustomerId      String?
+  polarCheckoutId      String?
+  /// Used by Business — billed seats. Free/individual plans = 1.
+  seats                Int                 @default(1)
+  /// Free-form for raw Polar payload, A/B flags, grant reasons, etc.
+  metadata             Json?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  usageMeters          UsageMeter[]
+  addOns               AddOn[]
+
+  @@index([status])
+  @@index([polarCustomerId])
+}
+
+/// Per-billing-period consumption. `period` is `YYYY-MM` (UTC) — one row
+/// per (subscription, period). The entitlements service upserts and bumps
+/// counters atomically.
+model UsageMeter {
+  id              String        @id @default(cuid())
+  subscriptionId  String
+  subscription    Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  /// `YYYY-MM` for monthly counters. Date-stamps avoid clock-skew during
+  /// period rollover — consult periodStart/periodEnd for the actual window.
+  period          String
+  periodStart     DateTime
+  periodEnd       DateTime
+  manualRuns      Int           @default(0)
+  scheduledRuns   Int           @default(0)
+  emailAlerts     Int           @default(0)
+  smsAlerts       Int           @default(0)
+  whatsappAlerts  Int           @default(0)
+  csvExports      Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([subscriptionId, period])
+  @@index([subscriptionId, periodEnd])
+}
+
+/// Records of one-shot or recurring extras. Polar order/subscription drives
+/// `unitsRemaining` for packs (decremented as consumed) and `quantity` for
+/// recurring extras (e.g. additional seats).
+model AddOn {
+  id              String       @id @default(cuid())
+  subscriptionId  String
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  kind            AddOnKind
+  quantity        Int          @default(1)
+  /// Remaining units for consumable packs (runs, SMS). null for recurring.
+  unitsRemaining  Int?
+  polarOrderId    String?      @unique
+  polarSubscriptionId String?
+  purchasedAt     DateTime     @default(now())
+  expiresAt       DateTime?
+
+  @@index([subscriptionId, kind])
+}
+
+/// Captures a user's intent to switch to a different (cheaper) plan at the
+/// end of their current billing period. The `BillingService` writes a
+/// PENDING row instead of mutating the Subscription immediately; a BullMQ
+/// repeatable worker (`ScheduledPlanChangesProcessor`) runs every 15 min,
+/// finds rows where `scheduledFor <= now()`, applies them, and marks them
+/// APPLIED. Upgrades stay immediate via Polar checkout — only downgrades
+/// hit this table.
+model ScheduledPlanChange {
+  id             String                    @id @default(cuid())
+  userId         String
+  user           User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Snapshot of the plan the user was on at scheduling time — useful for
+  /// audit and for the worker to detect "they already moved off this plan
+  /// via another path, skip applying."
+  currentPlanId  String
+  currentPlan    Plan                      @relation("ScheduledChangeCurrent", fields: [currentPlanId], references: [id])
+  targetPlanId   String
+  targetPlan     Plan                      @relation("ScheduledChangeTarget", fields: [targetPlanId], references: [id])
+  targetInterval BillingInterval           @default(MONTH)
+  /// When the change becomes effective. Set to `Subscription.currentPeriodEnd`
+  /// at write time, re-synced when Polar refreshes the period dates via
+  /// webhook so we stay aligned with the source of truth.
+  scheduledFor   DateTime
+  status         ScheduledPlanChangeStatus @default(PENDING)
+  appliedAt      DateTime?
+  canceledAt     DateTime?
+  metadata       Json?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  @@index([status, scheduledFor])
+  @@index([userId, status])
 }

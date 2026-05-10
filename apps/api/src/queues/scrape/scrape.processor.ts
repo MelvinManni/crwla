@@ -1,9 +1,12 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { Prisma, RunStatus, SearchStatus } from '@prisma/client';
+import { RunStatus, SearchStatus } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
-import { GoogleNewsService } from '../../modules/scraper/google-news.service';
+import { ThumbnailService } from '../../modules/scraper/thumbnail.service';
+import { SourceRegistry } from '../../modules/scraper/sources/source.registry';
+import { DEFAULT_SOURCES } from '../../modules/scraper/sources/source.types';
+import type { ScrapedItem } from '../../modules/scraper/google-news.service';
 import { FilterService } from '../../modules/filter/filter.service';
 import { ConfigService } from '@nestjs/config';
 import { SearchIndexQueue } from '../search-index/search-index.queue';
@@ -15,7 +18,8 @@ export class ScrapeProcessor extends WorkerHost {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly google: GoogleNewsService,
+    private readonly registry: SourceRegistry,
+    private readonly thumbnails: ThumbnailService,
     private readonly filter: FilterService,
     private readonly config: ConfigService,
     private readonly index: SearchIndexQueue,
@@ -25,7 +29,10 @@ export class ScrapeProcessor extends WorkerHost {
 
   async process(job: Job<{ searchId: string }>) {
     const { searchId } = job.data;
-    const search = await this.prisma.search.findUnique({ where: { id: searchId } });
+    const search = await this.prisma.search.findUnique({
+      where: { id: searchId },
+      include: { user: { select: { disabledSourceCategories: true } } },
+    });
     if (!search) throw new Error(`search ${searchId} not found`);
     if (search.status === SearchStatus.PAUSED) return { skipped: true };
 
@@ -35,7 +42,44 @@ export class ScrapeProcessor extends WorkerHost {
     });
 
     try {
-      const { items, errors } = await this.google.runMulti(search.keywords);
+      // Resolve sources: stored selection ∩ user permissions. Default to
+      // Google News when the search has no explicit sources (legacy data).
+      const requested = search.sources.length > 0 ? search.sources : [...DEFAULT_SOURCES];
+      const denied = search.user?.disabledSourceCategories ?? [];
+      const crawlers = this.registry.resolve(requested, denied);
+
+      if (crawlers.length === 0) {
+        this.logger.warn(
+          `search ${search.id}: no enabled sources (requested=${requested.join(',')} denied=${denied.join(',')})`,
+        );
+      }
+
+      // Fan out across crawlers + keywords; collect errors per (source, keyword).
+      const errors: Array<{ source: string; keyword: string; error: string }> = [];
+      const merged = new Map<string, ScrapedItem>(); // urlHash → item (cross-source dedup)
+
+      await Promise.all(
+        crawlers.flatMap((c) =>
+          search.keywords.map(async (kw) => {
+            try {
+              const got = await c.searchKeyword(kw);
+              for (const it of got) {
+                if (!merged.has(it.urlHash)) merged.set(it.urlHash, it);
+              }
+            } catch (e) {
+              errors.push({
+                source: c.id,
+                keyword: kw,
+                error: String((e as Error).message ?? e),
+              });
+            }
+          }),
+        ),
+      );
+
+      const items = Array.from(merged.values()).sort(
+        (a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0),
+      );
 
       // Apply LLM filter only when configured — heuristic at scrape time is
       // too risky (we'd drop data we can't recover). View-time filter handles
@@ -44,6 +88,17 @@ export class ScrapeProcessor extends WorkerHost {
       if (search.filterPrompt && this.config.get<string>('ANTHROPIC_API_KEY')) {
         const out = await this.filter.apply({ prompt: search.filterPrompt, items });
         kept = out.items;
+      }
+
+      // Enrich with thumbnails (og:image / twitter:image / favicon fallback).
+      // Best-effort — never fails the run; concurrency-bounded to avoid
+      // hammering source sites.
+      if (kept.length) {
+        try {
+          kept = await this.thumbnails.enrich(kept, 6);
+        } catch (e) {
+          this.logger.warn(`thumbnail enrichment failed: ${(e as Error).message}`);
+        }
       }
 
       let inserted: Array<{ id: string }> = [];

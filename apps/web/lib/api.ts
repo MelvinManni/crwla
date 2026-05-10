@@ -31,16 +31,38 @@ async function call<T>(method: string, path: string, opts: ApiOpts = {}): Promis
 
   if (!res.ok) {
     let msg: string;
+    let code: string | undefined;
     try {
-      const data = (await res.json()) as { error?: string | { message?: string } };
+      const data = (await res.json()) as {
+        error?: string | { message?: string };
+        code?: string;
+      };
       msg =
         typeof data.error === 'string'
           ? data.error
           : (data.error?.message ?? `HTTP ${res.status}`);
+      code =
+        typeof data.error === 'object' && data.error
+          ? (data.error as { code?: string }).code
+          : data.code;
     } catch {
       msg = `HTTP ${res.status}`;
     }
-    throw new Error(msg);
+    // Cross-cutting: when the server says we hit a plan limit, fire a
+    // window event so <UpgradeModalProvider/> can show the upgrade modal.
+    if (
+      typeof window !== 'undefined' &&
+      res.status === 403 &&
+      code === 'PLAN_LIMIT_EXCEEDED'
+    ) {
+      window.dispatchEvent(
+        new CustomEvent('crwla:plan-limit-exceeded', { detail: { reason: msg } }),
+      );
+    }
+    const err = new Error(msg) as Error & { status?: number; code?: string };
+    err.status = res.status;
+    err.code = code;
+    throw err;
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;

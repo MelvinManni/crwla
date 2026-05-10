@@ -36,22 +36,25 @@ export default function SigninPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
-      <div className="mb-8 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground font-mono text-sm">
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-10">
+      <div className="flex flex-col items-start gap-3.5">
+        <div className="grid h-11 w-11 place-items-center rounded-[10px] bg-fg font-mono text-[15px] font-semibold text-bg-elev">
           CR
         </div>
         <div>
-          <h1 className="text-xl font-semibold">Sign in to CRWLA</h1>
-          <p className="text-sm text-muted-foreground">
-            Internal research tool. Access is granted by an admin.
+          <h1 className="text-[26px] font-semibold leading-[1.15] tracking-[-0.02em]">
+            Sign in to CRWLA
+          </h1>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
+            Internal research tool. Access is granted by an admin — request below if you don't
+            have an account.
           </p>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Work email</Label>
+      <div className="mt-8 flex flex-col gap-3.5">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="email" className="text-[12px] font-medium">Work email</Label>
           <Input
             id="email"
             type="email"
@@ -60,10 +63,11 @@ export default function SigninPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
+            className="h-11 rounded-lg bg-bg-elev px-3 text-[14px]"
           />
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="password">Password</Label>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="password" className="text-[12px] font-medium">Password</Label>
           <Input
             id="password"
             type="password"
@@ -72,15 +76,24 @@ export default function SigninPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
+            className="h-11 rounded-lg bg-bg-elev px-3 text-[14px]"
           />
         </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button className="w-full" size="lg" onClick={submit} disabled={busy}>
+        {error && <p className="font-mono text-[11px] text-status-red">{error}</p>}
+        <Button
+          size="lg"
+          className="h-11 w-full rounded-lg bg-fg text-[14px] text-bg-elev hover:bg-fg/90"
+          onClick={submit}
+          disabled={busy}
+        >
           {busy ? <Spinner /> : 'Sign in'}
         </Button>
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="mt-2 text-center text-[12px] text-fg-muted">
           No account yet?{' '}
-          <Link href="/request-access" className="font-medium text-foreground underline-offset-4 hover:underline">
+          <Link
+            href="/request-access"
+            className="font-medium text-fg underline underline-offset-2"
+          >
             Request access
           </Link>
         </p>

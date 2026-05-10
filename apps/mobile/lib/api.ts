@@ -7,6 +7,21 @@ const BASE =
   process.env.EXPO_PUBLIC_API_URL ??
   'http://localhost:3001/api';
 
+/**
+ * Listener fired when the API replies with 403 + `code: 'PLAN_LIMIT_EXCEEDED'`.
+ * Wired up in `_layout.tsx` to show a native upgrade alert.
+ */
+type LimitListener = (reason: string) => void;
+const limitListeners: LimitListener[] = [];
+
+export function onPlanLimitExceeded(fn: LimitListener) {
+  limitListeners.push(fn);
+  return () => {
+    const i = limitListeners.indexOf(fn);
+    if (i >= 0) limitListeners.splice(i, 1);
+  };
+}
+
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = await SecureStore.getItemAsync(TOKEN_KEY);
   const res = await fetch(`${BASE}${path}`, {
@@ -19,16 +34,27 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   });
   if (!res.ok) {
     let msg: string;
+    let code: string | undefined;
     try {
-      const data = (await res.json()) as { error?: string | { message?: string } };
+      const data = (await res.json()) as {
+        error?: string | { message?: string };
+        code?: string;
+      };
       msg =
         typeof data.error === 'string'
           ? data.error
           : (data.error?.message ?? `HTTP ${res.status}`);
+      code = data.code;
     } catch {
       msg = `HTTP ${res.status}`;
     }
-    throw new Error(msg);
+    if (res.status === 403 && code === 'PLAN_LIMIT_EXCEEDED') {
+      for (const fn of limitListeners) fn(msg);
+    }
+    const err = new Error(msg) as Error & { status?: number; code?: string };
+    err.status = res.status;
+    err.code = code;
+    throw err;
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;

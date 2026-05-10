@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../core/prisma/prisma.service';
 import { ScrapeQueue } from '../queues/scrape/scrape.queue';
+import { ScheduledPlanChangesQueue } from '../queues/scheduled-plan-changes/scheduled-plan-changes.queue';
 import { SearchStatus } from '@prisma/client';
 
 @Injectable()
@@ -10,10 +11,12 @@ export class SchedulerService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly scrapeQueue: ScrapeQueue,
+    private readonly planChangesQueue: ScheduledPlanChangesQueue,
   ) {}
 
   async onModuleInit() {
     await this.reschedule();
+    await this.armPlanChangesWorker();
   }
 
   /**
@@ -36,5 +39,15 @@ export class SchedulerService implements OnModuleInit {
     }
     this.logger.log(`scheduler boot: ${n} repeatable(s) registered`);
     return { rescheduled: n };
+  }
+
+  private async armPlanChangesWorker() {
+    try {
+      await this.planChangesQueue.scheduleRepeatable();
+    } catch (e) {
+      this.logger.warn(
+        `scheduled-plan-changes arm failed: ${(e as Error).message}`,
+      );
+    }
   }
 }

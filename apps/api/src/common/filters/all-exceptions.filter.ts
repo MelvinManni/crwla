@@ -23,9 +23,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
     let message: string | object = 'internal server error';
+    let code: string | undefined;
     if (exception instanceof HttpException) {
       const r = exception.getResponse();
-      message = typeof r === 'string' ? r : (r as { message?: string }).message ?? r;
+      if (typeof r === 'string') {
+        message = r;
+      } else {
+        const obj = r as { message?: string; error?: string; code?: string };
+        message = obj.message ?? obj.error ?? r;
+        code = obj.code;
+      }
     } else if (exception instanceof Error) {
       message = exception.message;
     }
@@ -37,6 +44,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
     }
 
-    res.status(status).json({ error: message, statusCode: status, path: req.url });
+    res.status(status).json({
+      error: message,
+      ...(code ? { code } : {}),
+      statusCode: status,
+      path: req.url,
+    });
   }
 }

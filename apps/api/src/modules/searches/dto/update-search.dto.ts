@@ -21,5 +21,5 @@ export class UpdateSearchDto {
   @IsOptional() @IsIn(UPDATABLE_STATUSES as readonly string[]) status?: SearchStatus;
 
   @IsOptional() @IsArray() @IsString({ each: true }) locations?: string[];
-  @IsOptional() @IsArray() @IsString({ each: true }) sources?: string[];
+  // `sources` is server-derived from the active plan; not accepted from clients.
 }
