@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Bell, CreditCard, LayoutDashboard, LogOut, Plus, Search, Shield, Tag, Users } from 'lucide-react';
 import {
@@ -19,9 +18,10 @@ import {
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/types';
+import Link from 'next/link';
 
 type NavItem = {
-  href: string;
+  href: __next_route_internal_types__.RouteImpl<string>;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   count?: number;
