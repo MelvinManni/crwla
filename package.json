@@ -8,6 +8,7 @@
     "infra:down": "docker compose -f infra/docker-compose.yml down",
     "infra:logs": "docker compose -f infra/docker-compose.yml logs -f",
     "api:dev": "cd apps/api && npm run dev",
+    "api:start": "cd apps/api && npm run start:prod",
     "api:worker": "cd apps/api && npm run worker:dev",
     "api:migrate": "cd apps/api && npx prisma migrate deploy",
     "api:self-check": "cd apps/api && npm run self-check",
