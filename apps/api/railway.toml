@@ -1,29 +1,17 @@
 # Railway service config for the CRWLA API.
-# Set the service's Root Directory to `apps/api` in Railway settings so
-# Nixpacks scopes the build to this package (the monorepo root has no
-# top-level lockfile that pulls api deps).
+# Set the service's Root Directory to `apps/api` so this file (and the
+# Dockerfile next to it) get picked up by the build.
 
 [build]
-builder = "RAILPACK"
-# Lockfiles aren't committed in this repo, so use `npm install` (not `npm
-# ci` — that requires a perfectly synced lockfile). Prisma client is
-# generated before nest build so the compiled output can import
-# @prisma/client.
-buildCommand = "npm install && npx prisma generate && npm run build"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-# `prisma migrate deploy` is idempotent and cheap on a no-op deploy, so
-# running it on every start keeps the schema and the binary in sync without
-# a separate Railway pre-deploy step. Falls through to `node dist/main.js`
-# only if migrations succeed.
-startCommand = "npx prisma migrate deploy && node dist/main.js"
-
-# Nest registers the health controller under the global API_BASE_PATH
-# prefix (default /api). Adjust if you change API_BASE_PATH.
+# main.ts registers the health controller under API_BASE_PATH (default /api).
 healthcheckPath = "/api/health"
 healthcheckTimeout = 100
 
-# Restart on crash — Polar/Anthropic transient errors should not take the
+# Restart on crash — transient Polar/Anthropic errors should not take the
 # service down permanently.
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
