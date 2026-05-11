@@ -165,9 +165,9 @@ export function AdminBillingClient({
                     size="sm"
                     variant="outline"
                     onClick={() => syncPolar(p)}
-                    disabled={busy === p.id}
+                    loading={busy === p.id}
                   >
-                    {busy === p.id ? <Spinner /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    <RefreshCw className="h-3.5 w-3.5" />
                     Sync to Polar
                   </Button>
                 )}
@@ -371,8 +371,8 @@ function EditDialog({
           <Button variant="outline" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
-          <Button onClick={save} disabled={busy}>
-            {busy ? <Spinner /> : 'Save & sync to Polar'}
+          <Button onClick={save} loading={busy}>
+            Save & sync to Polar
           </Button>
         </DialogFooter>
       </DialogContent>

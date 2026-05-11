@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -161,8 +160,8 @@ export function AdminClient({
                       {r.reason && <p className="mt-2 text-sm">{r.reason}</p>}
                     </div>
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Button size="sm" disabled={busy === r.id} onClick={() => approve(r.id)}>
-                        {busy === r.id ? <Spinner /> : 'Approve'}
+                      <Button size="sm" loading={busy === r.id} onClick={() => approve(r.id)}>
+                        Approve
                       </Button>
                       <Button size="sm" variant="outline" disabled={busy === r.id} onClick={() => deny(r.id)}>
                         Deny

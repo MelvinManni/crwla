@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
 import { api } from '@/lib/api';
 import type { SessionUser } from '@/lib/types';
 
@@ -83,9 +82,9 @@ export default function SigninPage() {
           size="lg"
           className="h-11 w-full rounded-lg bg-fg text-[14px] text-bg-elev hover:bg-fg/90"
           onClick={submit}
-          disabled={busy}
+          loading={busy}
         >
-          {busy ? <Spinner /> : 'Sign in'}
+          Sign in
         </Button>
         <p className="mt-2 text-center text-[12px] text-fg-muted">
           No account yet?{' '}

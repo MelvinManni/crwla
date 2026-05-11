@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Spinner } from '@/components/ui/spinner';
 import { api } from '@/lib/api';
 
 export default function RequestAccessPage() {
@@ -158,9 +157,9 @@ export default function RequestAccessPage() {
           size="lg"
           className="h-11 w-full rounded-lg bg-fg text-[14px] text-bg-elev hover:bg-fg/90"
           onClick={submit}
-          disabled={busy}
+          loading={busy}
         >
-          {busy ? <Spinner /> : 'Submit request'}
+          Submit request
         </Button>
       </div>
     </div>

@@ -169,10 +169,11 @@ export function ResultsClient({
             size="sm"
             onClick={reload}
             disabled={busy !== null}
+            loading={busy === 'reload'}
             className="rounded-lg"
             aria-label="Refresh"
           >
-            {busy === 'reload' ? <Spinner /> : <RefreshCw className="h-3.5 w-3.5" />}
+            <RefreshCw className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="secondary"
@@ -232,9 +233,11 @@ export function ResultsClient({
               size="sm"
               onClick={applyFilter}
               disabled={busy !== null || !filter.trim()}
+              loading={busy === 'filter'}
               className="rounded-lg bg-fg text-bg-elev hover:bg-fg/90"
             >
-              {busy === 'filter' ? <Spinner /> : <><Sparkles className="h-3 w-3" />Apply</>}
+              <Sparkles className="h-3 w-3" />
+              Apply
             </Button>
           </div>
           {applied && (

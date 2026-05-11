@@ -8,7 +8,6 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Spinner } from '@/components/ui/spinner';
 import {
   Table,
   TableBody,
@@ -141,8 +140,9 @@ export function AlertsClient({
               ))}
             </div>
           </div>
-          <Button onClick={create} disabled={busy === 'create' || !keyword.trim()}>
-            {busy === 'create' ? <Spinner /> : <><Plus className="h-4 w-4" />Create alert</>}
+          <Button onClick={create} disabled={!keyword.trim()} loading={busy === 'create'}>
+            <Plus className="h-4 w-4" />
+            Create alert
           </Button>
         </div>
       </Card>

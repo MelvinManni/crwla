@@ -20,7 +20,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Spinner } from '@/components/ui/spinner';
 import { KeywordInput } from '@/components/keyword-input';
 import { CronPicker } from '@/components/cron-picker';
 import { useEntitlements } from '@/components/billing/entitlements-provider';
@@ -210,8 +209,8 @@ function StartCrawlDialog({
           >
             Cancel
           </Button>
-          <Button type="button" size="sm" onClick={submit} disabled={busy}>
-            {busy ? <Spinner /> : 'Start crawl'}
+          <Button type="button" size="sm" onClick={submit} loading={busy}>
+            Start crawl
           </Button>
         </div>
       </DialogContent>

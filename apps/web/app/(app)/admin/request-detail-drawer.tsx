@@ -10,7 +10,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { Spinner } from '@/components/ui/spinner';
 import type { AccessRequestView } from '@/lib/types';
 
 type Props = {
@@ -68,8 +67,8 @@ export function RequestDetailDrawer({ request, onOpenChange, onApprove, onDeny, 
               >
                 Deny
               </Button>
-              <Button disabled={busy} onClick={() => onApprove(request.id)}>
-                {busy ? <Spinner /> : 'Approve'}
+              <Button loading={busy} onClick={() => onApprove(request.id)}>
+                Approve
               </Button>
             </DrawerFooter>
           </>

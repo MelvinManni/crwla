@@ -100,8 +100,8 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <Button size="sm" onClick={save} disabled={busy !== null}>
-            {busy === 'save' ? <Spinner /> : 'Save'}
+          <Button size="sm" onClick={save} disabled={busy !== null} loading={busy === 'save'}>
+            Save
           </Button>
         </div>
       </div>
