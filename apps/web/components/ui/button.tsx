@@ -85,7 +85,7 @@ function Button({
       {...props}
     >
       {loading && (
-        <span className="absolute inset-0 grid place-items-center">
+        <span className="absolute inset-0 grid place-items-center bg-black/55">
           <Spinner />
         </span>
       )}
