@@ -24,7 +24,7 @@ export function CronPicker({
   const allowed = new Set(ent?.limits.cron ?? ['HOURLY', 'DAILY', 'WEEKLY', 'MANUAL']);
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid md:grid-cols-2 gap-2">
       {PRESETS.map((p) => {
         const active = value === p.id;
         const locked = !allowed.has(p.id);

@@ -42,7 +42,7 @@ export default async function DashboardPage({
             {out.total} {out.total === 1 ? 'CRAWL' : 'CRAWLS'} · {user.email}
           </p>
         </div>
-        <StartCrawlButton />
+        <StartCrawlButton hideOnMobile />
       </div>
 
       <DashboardClient initial={out.jobs} total={out.total} listParams={params} />

@@ -6,7 +6,7 @@ import type { SearchView } from '@/lib/types';
 export function SearchCard({ search }: { search: SearchView }) {
   return (
     <Link
-      href={`/searches/${search.id}`}
+      href={`/crawls/${search.id}`}
       className="block rounded-[10px] border border-border bg-bg-elev p-4 transition-colors hover:border-border-strong"
     >
       <div className="flex items-start justify-between gap-3">

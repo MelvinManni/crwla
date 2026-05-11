@@ -15,7 +15,6 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { KeywordChip } from '@/components/keyword-chip';
@@ -141,7 +140,7 @@ export function ResultsClient({
   return (
     <div className="mx-auto flex min-h-[calc(100svh-3.5rem)] flex-col">
       {/* Header */}
-      <div className="flex items-start justify-between gap-2 border-b border-border bg-bg px-4 py-4 md:px-6">
+      <div className="flex flex-col gap-3 border-b border-border bg-bg px-4 py-4 md:flex-row md:items-start md:justify-between md:gap-2 md:px-6">
         <div className="flex min-w-0 items-start gap-3">
           <Button
             variant="ghost"
@@ -162,7 +161,7 @@ export function ResultsClient({
             </p>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 md:shrink-0">
           <StatusPill status={initial.job.status} />
           <Button
             variant="secondary"
@@ -178,7 +177,7 @@ export function ResultsClient({
           <Button
             variant="secondary"
             size="sm"
-            render={<Link href={`/searches/${initial.job.id}/edit`} />}
+            render={<Link href={`/crawls/${initial.job.id}/edit`} />}
             className="rounded-lg"
           >
             <Pencil className="h-3.5 w-3.5" />
@@ -188,19 +187,11 @@ export function ResultsClient({
             size="sm"
             onClick={runNow}
             disabled={busy !== null}
+            loading={busy === 'run'}
             className="rounded-lg bg-fg text-bg-elev hover:bg-fg/90"
           >
-            {busy === 'run' ? (
-              <>
-                <Spinner />
-                Running…
-              </>
-            ) : (
-              <>
-                <Play className="h-3.5 w-3.5" />
-                Run now
-              </>
-            )}
+            <Play className="h-3.5 w-3.5" />
+            Run now
           </Button>
         </div>
       </div>
@@ -288,7 +279,7 @@ function ResultsPanel({
   listParams: ListParams;
 }) {
   const router = useRouter();
-  const base = `/searches/${searchId}`;
+  const base = `/crawls/${searchId}`;
 
   const [filters, setFilters] = useState<ListFilters>({
     query: listParams.q,

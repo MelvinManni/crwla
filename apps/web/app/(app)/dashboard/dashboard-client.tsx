@@ -225,7 +225,7 @@ export function DashboardClient({
                   <TableRow
                     key={j.id}
                     className="cursor-pointer"
-                    onClick={() => router.push(`/searches/${j.id}`)}
+                    onClick={() => router.push(`/crawls/${j.id}`)}
                   >
                     <TableCell>
                       <div className="font-medium">{j.name}</div>

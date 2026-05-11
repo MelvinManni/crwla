@@ -128,7 +128,7 @@ function StartCrawlDialog({
         filterPrompt,
       });
       onOpenChange(false);
-      router.push(`/searches/${out.job.id}` as never);
+      router.push(`/crawls/${out.job.id}` as never);
       router.refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -139,7 +139,7 @@ function StartCrawlDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex w-[calc(100vw-80px)] max-w-[540px] max-h-[calc(100vh-80px)] flex-col gap-0 p-0 overflow-hidden">
+      <DialogContent className="flex w-[calc(100vw-40px)] max-w-[540px] max-h-[calc(100vh-40px)] flex-col gap-0 p-0 overflow-y-auto rounded-lg">
         <DialogHeader className="shrink-0 border-b border-border bg-background px-6 py-4">
           <DialogTitle>Start a crawl</DialogTitle>
           <DialogDescription>

@@ -47,7 +47,7 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
         status: paused ? 'PAUSED' : 'RUNNING',
       });
       toast({ title: 'Saved' });
-      router.push(`/searches/${initial.id}` as never);
+      router.push(`/crawls/${initial.id}` as never);
       router.refresh();
     } catch (e) {
       toast({ title: 'Save failed', description: (e as Error).message, variant: 'destructive' });
@@ -73,7 +73,7 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
   return (
     <div className="mx-auto px-4 py-6 md:px-8">
       <div className="mb-6 flex items-center justify-between">
-        <Button render={<Link href={`/searches/${initial.id}`} />} variant="ghost" size="sm">
+        <Button render={<Link href={`/crawls/${initial.id}`} />} variant="ghost" size="sm">
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
@@ -87,7 +87,7 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete this search?</AlertDialogTitle>
+                <AlertDialogTitle>Delete this crawl?</AlertDialogTitle>
                 <AlertDialogDescription>
                   All run history and stored results will be removed. This cannot be undone.
                 </AlertDialogDescription>
@@ -106,7 +106,7 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
         </div>
       </div>
 
-      <h1 className="text-2xl font-semibold tracking-tight">Edit search</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Edit crawl</h1>
 
       <div className="mt-6 space-y-6">
         <div className="space-y-1.5">
