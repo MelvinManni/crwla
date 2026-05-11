@@ -29,6 +29,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/types";
 import Link from "next/link";
+import { useStartCrawl } from "@/components/start-crawl-modal";
 
 type NavItem = {
   href: __next_route_internal_types__.RouteImpl<string>;
@@ -38,8 +39,7 @@ type NavItem = {
 };
 
 const NAV_PRIMARY: NavItem[] = [
-  { href: "/dashboard", label: "Searches", icon: LayoutDashboard },
-  { href: "/searches/new", label: "New search", icon: Plus },
+  { href: "/dashboard", label: "Crawls", icon: LayoutDashboard },
   { href: "/search", label: "Recent results", icon: Search },
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/billing", label: "Billing", icon: CreditCard },
@@ -64,6 +64,7 @@ function initials(name: string) {
 export function AppSidebar({ user }: { user: SessionUser }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { open: openStartCrawl } = useStartCrawl();
   const isActive = (href: string) =>
     href === "/dashboard"
       ? pathname === href
@@ -102,6 +103,16 @@ export function AppSidebar({ user }: { user: SessionUser }) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={openStartCrawl}
+                  tooltip="Start a crawl"
+                  className="h-7 gap-2.5 px-2 text-[13px] text-fg-muted hover:bg-bg-sunk hover:text-fg"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Start a crawl</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               {NAV_PRIMARY.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton

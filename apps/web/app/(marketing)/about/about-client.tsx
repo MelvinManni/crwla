@@ -43,6 +43,9 @@ export function AboutClient() {
             <a className="text-mk-accent" href="/about">
               About
             </a>
+            <a className="hover:text-mk-accent" href="/pricing">
+              Pricing
+            </a>
             <a className="hover:text-mk-accent" href="/contact">
               Contact
             </a>
@@ -246,6 +249,7 @@ export function AboutClient() {
         <div className="flex gap-6 [&_a:hover]:text-mk-accent max-[900px]:flex-wrap max-[900px]:gap-4">
           <a href="/">Home</a>
           <a href="/about">About</a>
+          <a href="/pricing">Pricing</a>
           <a href="/contact">Contact</a>
           <a href="#">Docs</a>
         </div>

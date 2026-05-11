@@ -1,7 +1,5 @@
-import Link from 'next/link';
-import { Plus } from 'lucide-react';
 import { cookies } from 'next/headers';
-import { Button } from '@/components/ui/button';
+import { StartCrawlButton } from '@/components/start-crawl-button';
 import { api } from '@/lib/api';
 import { requireSession } from '@/lib/auth';
 import type { SearchView } from '@/lib/types';
@@ -39,15 +37,12 @@ export default async function DashboardPage({
     <div className="mx-auto px-4 py-6 md:px-8">
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em]">Searches</h1>
+          <h1 className="text-[22px] font-semibold tracking-[-0.02em]">Crawls</h1>
           <p className="mt-0.5 font-mono text-[11px] text-fg-subtle">
-            {out.total} {out.total === 1 ? 'SEARCH' : 'SEARCHES'} · {user.email}
+            {out.total} {out.total === 1 ? 'CRAWL' : 'CRAWLS'} · {user.email}
           </p>
         </div>
-        <Button render={<Link href="/searches/new" />} size="sm" className="rounded-lg">
-          <Plus className="h-4 w-4" />
-          New search
-        </Button>
+        <StartCrawlButton />
       </div>
 
       <DashboardClient initial={out.jobs} total={out.total} listParams={params} />

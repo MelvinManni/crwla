@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const COOKIE_NAME = 'crwla_token';
 const AUTH_PATHS = ['/signin', '/request-access'];
-const MARKETING_PATHS = ['/about', '/contact'];
+const MARKETING_PATHS = ['/about', '/contact', '/pricing'];
 
 function isMarketing(pathname: string) {
   if (pathname === '/') return true;

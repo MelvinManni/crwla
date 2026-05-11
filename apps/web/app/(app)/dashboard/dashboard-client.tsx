@@ -152,10 +152,10 @@ export function DashboardClient({
   }
 
   function onExportCsv() {
-    exportCsv('searches', sorted, EXPORT_COLUMNS);
+    exportCsv('crawls', sorted, EXPORT_COLUMNS);
   }
   function onExportXls() {
-    exportXls('searches', sorted, EXPORT_COLUMNS);
+    exportXls('crawls', sorted, EXPORT_COLUMNS);
   }
 
   const isFiltered =
@@ -216,8 +216,8 @@ export function DashboardClient({
                     className="px-4 py-10 text-center text-[13px] text-fg-muted"
                   >
                     {isFiltered
-                      ? 'No searches match the current filters.'
-                      : 'No searches yet — create your first one to start tracking keywords.'}
+                      ? 'No crawls match the current filters.'
+                      : 'No crawls yet — start your first to begin tracking keywords.'}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -288,8 +288,8 @@ export function DashboardClient({
           {sorted.length === 0 ? (
             <div className="rounded-[10px] border border-dashed border-border bg-bg-elev px-6 py-16 text-center text-[13px] text-fg-muted">
               {isFiltered
-                ? 'No searches match the current filters.'
-                : 'No searches yet — create your first one to start tracking keywords.'}
+                ? 'No crawls match the current filters.'
+                : 'No crawls yet — start your first to begin tracking keywords.'}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

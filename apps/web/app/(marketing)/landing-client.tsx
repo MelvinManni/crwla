@@ -242,6 +242,9 @@ function Nav() {
           <a className="relative py-1 hover:text-mk-accent" href="/about">
             About
           </a>
+          <a className="relative py-1 hover:text-mk-accent" href="/pricing">
+            Pricing
+          </a>
           <a className="relative py-1 hover:text-mk-accent" href="/contact">
             Contact
           </a>
@@ -575,9 +578,8 @@ function Footer() {
           <div className="flex gap-6 text-[13px] text-mk-muted [&_a:hover]:text-mk-accent max-[900px]:flex-wrap max-[900px]:gap-4">
             <a href="/">Home</a>
             <a href="/about">About</a>
+            <a href="/pricing">Pricing</a>
             <a href="/contact">Contact</a>
-            {/* <a href="#">Pricing</a>
-            <a href="#">Docs</a> */}
           </div>
           <span className="font-jetbrains text-[11px] text-mk-subtle tracking-[0.06em]">© 2026 · Lagos / Abuja</span>
         </div>
