@@ -165,7 +165,6 @@ export function ResultsClient({
           <StatusPill status={initial.job.status} />
           <Button
             variant="secondary"
-            size="sm"
             onClick={reload}
             disabled={busy !== null}
             loading={busy === 'reload'}
@@ -176,7 +175,6 @@ export function ResultsClient({
           </Button>
           <Button
             variant="secondary"
-            size="sm"
             render={<Link href={`/crawls/${initial.job.id}/edit`} />}
             className="rounded-lg"
           >
@@ -184,7 +182,6 @@ export function ResultsClient({
             Edit
           </Button>
           <Button
-            size="sm"
             onClick={runNow}
             disabled={busy !== null}
             loading={busy === 'run'}
@@ -221,7 +218,6 @@ export function ResultsClient({
               className="min-h-[60px] flex-1 rounded-lg bg-bg px-3 py-2.5 text-[13px]"
             />
             <Button
-              size="sm"
               onClick={applyFilter}
               disabled={busy !== null || !filter.trim()}
               loading={busy === 'filter'}

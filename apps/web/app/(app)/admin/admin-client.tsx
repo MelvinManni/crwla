@@ -160,10 +160,10 @@ export function AdminClient({
                       {r.reason && <p className="mt-2 text-sm">{r.reason}</p>}
                     </div>
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Button size="sm" loading={busy === r.id} onClick={() => approve(r.id)}>
+                      <Button loading={busy === r.id} onClick={() => approve(r.id)}>
                         Approve
                       </Button>
-                      <Button size="sm" variant="outline" disabled={busy === r.id} onClick={() => deny(r.id)}>
+                      <Button variant="outline" disabled={busy === r.id} onClick={() => deny(r.id)}>
                         Deny
                       </Button>
                     </div>
@@ -205,7 +205,6 @@ export function AdminClient({
                     </div>
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button
-                        size="sm"
                         variant="outline"
                         disabled={busy === u.id}
                         onClick={() => changeRole(u, u.role === 'Admin' ? 'member' : 'admin')}
@@ -213,7 +212,6 @@ export function AdminClient({
                         {u.role === 'Admin' ? 'Demote' : 'Promote'}
                       </Button>
                       <Button
-                        size="sm"
                         variant="outline"
                         disabled={busy === u.id}
                         onClick={() => toggleActive(u)}

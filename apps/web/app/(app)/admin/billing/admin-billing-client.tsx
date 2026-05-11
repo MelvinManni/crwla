@@ -152,7 +152,6 @@ export function AdminBillingClient({
               </div>
               <div className="flex shrink-0 gap-2">
                 <Button
-                  size="sm"
                   variant="outline"
                   onClick={() => setEditing(p)}
                   disabled={busy === p.id}
@@ -162,7 +161,6 @@ export function AdminBillingClient({
                 </Button>
                 {p.tier !== 'FREE' && (
                   <Button
-                    size="sm"
                     variant="outline"
                     onClick={() => syncPolar(p)}
                     loading={busy === p.id}
@@ -173,7 +171,6 @@ export function AdminBillingClient({
                 )}
                 {p.active ? (
                   <Button
-                    size="sm"
                     variant="ghost"
                     onClick={() => archive(p)}
                     disabled={busy === p.id}
@@ -183,7 +180,6 @@ export function AdminBillingClient({
                   </Button>
                 ) : (
                   <Button
-                    size="sm"
                     variant="ghost"
                     onClick={() => restore(p)}
                     disabled={busy === p.id}

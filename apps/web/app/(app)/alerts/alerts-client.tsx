@@ -132,7 +132,6 @@ export function AlertsClient({
                 <Button
                   key={f}
                   variant={frequency === f ? 'default' : 'outline'}
-                  size="sm"
                   onClick={() => setFrequency(f)}
                 >
                   {f.toLowerCase()}
@@ -200,7 +199,6 @@ export function AlertsClient({
                   <TableCell>
                     <div className="flex justify-end gap-2">
                       <Button
-                        size="sm"
                         variant="outline"
                         disabled={busy === a.id}
                         onClick={() => toggle(a)}
@@ -242,7 +240,7 @@ export function AlertsClient({
                   </p>
                 )}
                 <div className="mt-3 flex justify-end gap-2">
-                  <Button size="sm" variant="outline" disabled={busy === a.id} onClick={() => toggle(a)}>
+                  <Button variant="outline" disabled={busy === a.id} onClick={() => toggle(a)}>
                     {a.active ? 'Pause' : 'Resume'}
                   </Button>
                   <DeleteAlertButton alert={a} disabled={busy === a.id} onConfirm={() => remove(a.id)} />
@@ -276,7 +274,7 @@ function DeleteAlertButton({
 }) {
   return (
     <AlertDialog>
-      <AlertDialogTrigger render={<Button size="sm" variant="ghost" disabled={disabled} />}>
+      <AlertDialogTrigger render={<Button variant="ghost" disabled={disabled} />}>
         <Trash2 className="h-4 w-4" />
       </AlertDialogTrigger>
       <AlertDialogContent>

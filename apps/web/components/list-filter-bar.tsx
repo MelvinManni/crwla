@@ -109,7 +109,6 @@ export function ListFilterBar({
       <div className="ml-auto flex items-center gap-1.5">
         <Button
           variant="outline"
-          size="sm"
           onClick={onExportCsv}
           className="h-8 rounded-md"
           aria-label="Export as CSV"
@@ -119,7 +118,6 @@ export function ListFilterBar({
         </Button>
         <Button
           variant="outline"
-          size="sm"
           onClick={onExportXls}
           className="h-8 rounded-md"
           aria-label="Export as Excel"

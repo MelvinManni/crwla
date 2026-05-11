@@ -55,7 +55,6 @@ export default function RequestAccessPage() {
         </div>
         <Button
           variant="secondary"
-          size="sm"
           render={<Link href="/signin" />}
           className="rounded-lg"
         >

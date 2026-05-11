@@ -73,14 +73,14 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
   return (
     <div className="mx-auto px-4 py-6 md:px-8">
       <div className="mb-6 flex items-center justify-between">
-        <Button render={<Link href={`/crawls/${initial.id}`} />} variant="ghost" size="sm">
+        <Button render={<Link href={`/crawls/${initial.id}`} />} variant="ghost">
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
         <div className="flex gap-2">
           <AlertDialog>
             <AlertDialogTrigger
-              render={<Button variant="destructive" size="sm" disabled={busy !== null} />}
+              render={<Button variant="destructive" disabled={busy !== null} />}
             >
               <Trash2 className="h-4 w-4" />
               Delete
@@ -100,7 +100,7 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <Button size="sm" onClick={save} disabled={busy !== null} loading={busy === 'save'}>
+          <Button onClick={save} disabled={busy !== null} loading={busy === 'save'}>
             Save
           </Button>
         </div>

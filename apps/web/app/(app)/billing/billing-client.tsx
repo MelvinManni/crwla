@@ -125,12 +125,12 @@ export function BillingClient({
           <Stat label="SMS alerts" value={mine.usage.smsAlerts} bonus={mine.bonus.extraSms} />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-dashed border-border pt-3">
-          <Button size="sm" variant="outline" onClick={openPortal} disabled={busy} loading={portalMut.isPending}>
+          <Button variant="outline" onClick={openPortal} disabled={busy} loading={portalMut.isPending}>
             <ExternalLink className="h-3.5 w-3.5" />
             Manage on Polar
           </Button>
           {mine.plan.tier !== 'FREE' && !mine.cancelAtPeriodEnd && (
-            <Button size="sm" variant="ghost" onClick={cancel} disabled={busy}>
+            <Button variant="ghost" onClick={cancel} disabled={busy}>
               Cancel at period end
             </Button>
           )}

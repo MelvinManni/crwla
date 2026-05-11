@@ -203,13 +203,12 @@ function StartCrawlDialog({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             disabled={busy}
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button type="button" size="sm" onClick={submit} loading={busy}>
+          <Button type="button" onClick={submit} loading={busy}>
             Start crawl
           </Button>
         </div>
