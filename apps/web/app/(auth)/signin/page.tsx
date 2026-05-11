@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +10,6 @@ import { api } from '@/lib/api';
 import type { SessionUser } from '@/lib/types';
 
 export default function SigninPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -26,11 +24,13 @@ export default function SigninPage() {
     setBusy(true);
     try {
       await api.post<{ user: SessionUser }>('/auth/signin', { email, password });
-      router.push('/dashboard');
-      router.refresh();
+      // Hard navigation so the browser sends a fresh request to /dashboard
+      // with the just-set crwla_token cookie. router.push + router.refresh
+      // races with cookie persistence and can bounce the user back to /signin
+      // via middleware.
+      window.location.assign('/dashboard');
     } catch (e) {
       setError((e as Error).message);
-    } finally {
       setBusy(false);
     }
   }
