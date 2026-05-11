@@ -43,7 +43,6 @@ const CHANNELS = [
   { label: 'Email', value: 'hello@crwla.com', meta: 'General inbox · 24h reply', href: 'mailto:hello@crwla.com' },
   { label: 'Sales', value: 'sales@crwla.com', meta: 'Teams, agencies, custom plans', href: 'mailto:sales@crwla.com' },
   { label: 'Press', value: 'press@crwla.com', meta: 'Embargo-friendly · Ada replies', href: 'mailto:press@crwla.com' },
-  { label: 'Office', value: '14 Adetokunbo Ademola, Victoria Island', meta: 'Lagos · Mon–Fri · by appointment', href: '#' },
 ];
 
 export function ContactClient() {
@@ -325,12 +324,12 @@ export function ContactClient() {
       </main>
 
       <footer className="max-w-[1280px] mx-auto px-10 py-7 border-t border-mk-light-line flex justify-between flex-wrap gap-5 font-jetbrains text-[11px] tracking-[0.1em] text-mk-light-muted relative z-[1] max-[600px]:px-5 max-[600px]:py-6 max-[600px]:flex-col max-[600px]:items-start max-[600px]:gap-3">
-        <span>© 2026 CRWLA Labs · Lagos / Abuja</span>
+        <span>© 2026 CRWLA Labs</span>
         <div className="flex gap-6 [&_a:hover]:text-mk-accent max-[600px]:flex-wrap max-[600px]:gap-3.5">
           <a href="/">Home</a>
           <a href="/about">About</a>
           <a href="/contact">Contact</a>
-          <a href="#">Docs</a>
+          {/* <a href="#">Docs</a> */}
         </div>
         <span>hello@crwla.com</span>
       </footer>
