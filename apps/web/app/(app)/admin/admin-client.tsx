@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { AccessRequestView, UserAdminView } from '@/lib/types';
+import { RequestDetailDrawer } from './request-detail-drawer';
+import { MemberDetailDrawer } from './member-detail-drawer';
 
 export function AdminClient({
   initialRequests,
@@ -26,12 +28,15 @@ export function AdminClient({
   const [requests, setRequests] = useState(initialRequests);
   const [users, setUsers] = useState(initialUsers);
   const [busy, setBusy] = useState<string | null>(null);
+  const [openRequest, setOpenRequest] = useState<AccessRequestView | null>(null);
+  const [openMember, setOpenMember] = useState<UserAdminView | null>(null);
 
   async function approve(id: string) {
     setBusy(id);
     try {
       await api.post(`/admin/requests/${id}/approve`);
       setRequests((r) => r.filter((x) => x.id !== id));
+      setOpenRequest((cur) => (cur?.id === id ? null : cur));
       toast({ title: 'Approved', description: 'Member created.' });
       router.refresh();
     } catch (e) {
@@ -46,6 +51,7 @@ export function AdminClient({
     try {
       await api.post(`/admin/requests/${id}/deny`);
       setRequests((r) => r.filter((x) => x.id !== id));
+      setOpenRequest((cur) => (cur?.id === id ? null : cur));
       toast({ title: 'Denied' });
     } catch (e) {
       toast({ title: 'Deny failed', description: (e as Error).message, variant: 'destructive' });
@@ -58,7 +64,9 @@ export function AdminClient({
     setBusy(u.id);
     try {
       await api.patch(`/admin/users/${u.id}`, { active: !u.active });
-      setUsers((arr) => arr.map((x) => (x.id === u.id ? { ...x, active: !u.active } : x)));
+      const next = { ...u, active: !u.active };
+      setUsers((arr) => arr.map((x) => (x.id === u.id ? next : x)));
+      setOpenMember((cur) => (cur?.id === u.id ? next : cur));
     } catch (e) {
       toast({ title: 'Update failed', description: (e as Error).message, variant: 'destructive' });
     } finally {
@@ -70,9 +78,9 @@ export function AdminClient({
     setBusy(u.id);
     try {
       await api.patch(`/admin/users/${u.id}`, { role });
-      setUsers((arr) =>
-        arr.map((x) => (x.id === u.id ? { ...x, role: role === 'admin' ? 'Admin' : 'Member' } : x)),
-      );
+      const next: UserAdminView = { ...u, role: role === 'admin' ? 'Admin' : 'Member' };
+      setUsers((arr) => arr.map((x) => (x.id === u.id ? next : x)));
+      setOpenMember((cur) => (cur?.id === u.id ? next : cur));
     } catch (e) {
       toast({ title: 'Update failed', description: (e as Error).message, variant: 'destructive' });
     } finally {
@@ -83,14 +91,14 @@ export function AdminClient({
   async function toggleCategory(u: UserAdminView, category: string) {
     setBusy(u.id);
     const current = u.disabledSourceCategories ?? [];
-    const next = current.includes(category)
+    const nextCats = current.includes(category)
       ? current.filter((c) => c !== category)
       : [...current, category];
     try {
-      await api.patch(`/admin/users/${u.id}`, { disabledSourceCategories: next });
-      setUsers((arr) =>
-        arr.map((x) => (x.id === u.id ? { ...x, disabledSourceCategories: next } : x)),
-      );
+      await api.patch(`/admin/users/${u.id}`, { disabledSourceCategories: nextCats });
+      const next = { ...u, disabledSourceCategories: nextCats };
+      setUsers((arr) => arr.map((x) => (x.id === u.id ? next : x)));
+      setOpenMember((cur) => (cur?.id === u.id ? next : cur));
     } catch (e) {
       toast({ title: 'Update failed', description: (e as Error).message, variant: 'destructive' });
     } finally {
@@ -131,7 +139,19 @@ export function AdminClient({
           ) : (
             <div className="space-y-3">
               {requests.map((r) => (
-                <Card key={r.id} className="p-4">
+                <Card
+                  key={r.id}
+                  className="cursor-pointer p-4 transition-colors hover:bg-accent/50"
+                  onClick={() => setOpenRequest(r)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setOpenRequest(r);
+                    }
+                  }}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="font-medium">{r.name}</h3>
@@ -140,7 +160,7 @@ export function AdminClient({
                       </p>
                       {r.reason && <p className="mt-2 text-sm">{r.reason}</p>}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" disabled={busy === r.id} onClick={() => approve(r.id)}>
                         {busy === r.id ? <Spinner /> : 'Approve'}
                       </Button>
@@ -160,7 +180,19 @@ export function AdminClient({
             {users.map((u) => {
               const denied = u.disabledSourceCategories ?? [];
               return (
-                <Card key={u.id} className="flex flex-col gap-3 p-3 px-4">
+                <Card
+                  key={u.id}
+                  className="flex cursor-pointer flex-col gap-3 p-3 px-4 transition-colors hover:bg-accent/50"
+                  onClick={() => setOpenMember(u)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setOpenMember(u);
+                    }
+                  }}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -172,7 +204,7 @@ export function AdminClient({
                         {u.email} · {u.team} · last active {u.last}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="sm"
                         variant="outline"
@@ -192,7 +224,10 @@ export function AdminClient({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 border-t border-dashed border-border pt-2">
+                  <div
+                    className="flex flex-wrap items-center gap-1.5 border-t border-dashed border-border pt-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">
                       Source access
                     </span>
@@ -224,6 +259,23 @@ export function AdminClient({
           </div>
         </TabsContent>
       </Tabs>
+
+      <RequestDetailDrawer
+        request={openRequest}
+        onOpenChange={(open) => !open && setOpenRequest(null)}
+        onApprove={approve}
+        onDeny={deny}
+        busy={openRequest ? busy === openRequest.id : false}
+      />
+
+      <MemberDetailDrawer
+        member={openMember}
+        onOpenChange={(open) => !open && setOpenMember(null)}
+        onToggleActive={toggleActive}
+        onChangeRole={changeRole}
+        onToggleCategory={toggleCategory}
+        busy={openMember ? busy === openMember.id : false}
+      />
     </div>
   );
 }

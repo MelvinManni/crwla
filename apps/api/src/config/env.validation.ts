@@ -33,6 +33,14 @@ export const envValidationSchema = Joi.object({
   POLAR_ACCESS_TOKEN: Joi.string().optional().allow(''),
   POLAR_SERVER: Joi.string().valid('sandbox', 'production').default('sandbox'),
   POLAR_WEBHOOK_SECRET: Joi.string().optional().allow(''),
+
+  // --- Transactional mail (Mailtrap by default)
+  MAIL_FROM: Joi.string().default('CRWLA <hello@crwla.com>'),
+  MAIL_SUPPORT_TO: Joi.string().email().default('support@crwla.com'),
+  MAILTRAP_HOST: Joi.string().default('sandbox.smtp.mailtrap.io'),
+  MAILTRAP_PORT: Joi.number().default(2525),
+  MAILTRAP_USER: Joi.string().optional().allow(''),
+  MAILTRAP_PASSWORD: Joi.string().optional().allow(''),
 });
 
 export type EnvVars = {
@@ -55,4 +63,10 @@ export type EnvVars = {
   DEFAULT_REGION: string;
   ANTHROPIC_API_KEY?: string;
   ANTHROPIC_MODEL: string;
+  MAIL_FROM: string;
+  MAIL_SUPPORT_TO: string;
+  MAILTRAP_HOST: string;
+  MAILTRAP_PORT: number;
+  MAILTRAP_USER?: string;
+  MAILTRAP_PASSWORD?: string;
 };

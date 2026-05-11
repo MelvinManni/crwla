@@ -28,7 +28,6 @@ export default function SigninPage() {
       // with the just-set crwla_token cookie. router.push + router.refresh
       // races with cookie persistence and can bounce the user back to /signin
       // via middleware.
-      window.location.assign('/dashboard');
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);

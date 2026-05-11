@@ -111,6 +111,35 @@ model User {
   @@map("user")
 }
 
+enum ContactPurpose {
+  DEMO
+  SALES
+  PRESS
+  SUPPORT
+  OTHER
+}
+
+/// Public contact-form submission. Created by anonymous visitors via the
+/// landing-site `/contact` page; surfaced to support@crwla.com via Mailtrap.
+model ContactSubmission {
+  id           String          @id @default(cuid())
+  purpose      ContactPurpose  @default(OTHER)
+  name         String
+  email        String
+  company      String?
+  role         String?
+  volume       Int?
+  message      String?
+  ipAddress    String?         @map("ip_address")
+  userAgent    String?         @map("user_agent")
+  emailedAt    DateTime?       @map("emailed_at")
+  emailError   String?         @map("email_error")
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("contact_submission")
+}
+
 model AccessRequest {
   id           String              @id @default(cuid())
   email        String

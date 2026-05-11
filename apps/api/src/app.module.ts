@@ -15,6 +15,7 @@ import { ScraperModule } from './modules/scraper/scraper.module';
 import { SourcesModule } from './modules/sources/sources.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { FilterModule } from './modules/filter/filter.module';
+import { ContactModule } from './modules/contact/contact.module';
 import { QueuesModule } from './queues/queues.module';
 import { TasksModule } from './tasks/tasks.module';
 
@@ -36,6 +37,7 @@ import { TasksModule } from './tasks/tasks.module';
     SourcesModule,
     BillingModule,
     FilterModule,
+    ContactModule,
     QueuesModule,
     TasksModule,
   ],
