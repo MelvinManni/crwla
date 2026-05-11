@@ -572,7 +572,7 @@ function Footer() {
             <span className="relative w-[22px] h-[22px] rounded-full bg-mk-ink overflow-hidden after:content-[''] after:absolute after:inset-1 after:rounded-full after:bg-mk-accent after:animate-mk-orbit" />
             CRWLA
           </span>
-          <div className="flex gap-5 text-[13px] text-mk-muted [&_a:hover]:text-mk-accent max-[900px]:flex-wrap max-[900px]:gap-4">
+          <div className="flex gap-6 text-[13px] text-mk-muted [&_a:hover]:text-mk-accent max-[900px]:flex-wrap max-[900px]:gap-4">
             <a href="/">Home</a>
             <a href="/about">About</a>
             <a href="/contact">Contact</a>
