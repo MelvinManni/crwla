@@ -24,7 +24,12 @@ import { Pagination } from '@/components/pagination';
 import { ListFilterBar, type ListFilters } from '@/components/list-filter-bar';
 import { exportCsv, exportXls, type ExportColumn } from '@/lib/export';
 import { buildListSearch, type ListParams } from '@/lib/list-state';
-import { api } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  crawlResultsQuery,
+  useApplyCrawlFilter,
+  useRunCrawl,
+} from '@/lib/queries/crawls';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
 import type { ResultView } from '@/lib/types';
@@ -70,71 +75,82 @@ export function ResultsClient({
   listParams: ListParams;
 }) {
   const router = useRouter();
+  const qc = useQueryClient();
+  const runMut = useRunCrawl();
+  const filterMut = useApplyCrawlFilter();
   const [results, setResults] = useState(initial.results);
   const [filter, setFilter] = useState('');
   const [applied, setApplied] = useState(initial.job.filterPrompt || null);
   const [filterMode, setFilterMode] = useState<string | null>(null);
-  const [busy, setBusy] = useState<'run' | 'filter' | 'reload' | null>(null);
+  // Reload spinner — separate from mutations.
+  const [reloading, setReloading] = useState(false);
+
+  const busy: 'run' | 'filter' | 'reload' | null = runMut.isPending
+    ? 'run'
+    : filterMut.isPending
+      ? 'filter'
+      : reloading
+        ? 'reload'
+        : null;
 
   async function fetchLatest() {
-    const out = await api.get<Initial>(`/searches/${initial.job.id}/results`);
+    // Route the refetch through the query cache so any consumer with the
+    // same key receives the fresh data, and a future visit can hit the
+    // cache instead of round-tripping.
+    const out = await qc.fetchQuery(crawlResultsQuery(initial.job.id));
     setResults(out.results);
+    qc.invalidateQueries({ queryKey: ['searches', 'results', initial.job.id] });
     router.refresh();
   }
 
   async function reload() {
-    setBusy('reload');
+    setReloading(true);
     try {
       await fetchLatest();
     } finally {
-      setBusy(null);
+      setReloading(false);
     }
   }
 
-  // Stays in `busy='run'` from click through fetch so the button shows one
-  // continuous loading state. Sonner drives a single toast id for the
-  // whole lifecycle (loading → success/error) — no stacked toasts on retry.
-  async function runNow() {
-    setBusy('run');
+  // One toast id for the whole click-through-fetch lifecycle so retries
+  // don't stack.
+  function runNow() {
     const t = toast.loading('Starting run…');
-    try {
-      await api.post(`/searches/${initial.job.id}/run`);
-      toast.loading('Run started — fetching results…', { id: t });
-      // Give the worker a moment to insert results before we refetch.
-      await new Promise((r) => setTimeout(r, 1500));
-      await fetchLatest();
-      toast.success('Results refreshed', { id: t });
-    } catch (e) {
-      const err = e as Error & { code?: string };
-      if (err.code === 'RUN_IN_PROGRESS') {
-        toast.warning('Run already in progress', {
-          id: t,
-          description:
-            'Wait for the current run to finish before starting another.',
-        });
-      } else {
-        toast.error('Run failed', { id: t, description: err.message });
-      }
-    } finally {
-      setBusy(null);
-    }
+    runMut.mutate(initial.job.id, {
+      onSuccess: async () => {
+        toast.loading('Run started — fetching results…', { id: t });
+        // Let the worker insert results before refetching.
+        await new Promise((r) => setTimeout(r, 1500));
+        await fetchLatest();
+        toast.success('Results refreshed', { id: t });
+      },
+      onError: (e) => {
+        const err = e as Error & { code?: string };
+        if (err.code === 'RUN_IN_PROGRESS') {
+          toast.warning('Run already in progress', {
+            id: t,
+            description: 'Wait for the current run to finish before starting another.',
+          });
+        } else {
+          toast.error('Run failed', { id: t, description: err.message });
+        }
+      },
+    });
   }
 
-  async function applyFilter() {
+  function applyFilter() {
     if (!filter.trim()) return;
-    setBusy('filter');
-    try {
-      const out = await api.post<{ results: ResultView[]; mode: string }>(
-        `/searches/${initial.job.id}/filter`,
-        { prompt: filter.trim() },
-      );
-      setResults(out.results);
-      setFilterMode(out.mode);
-      setApplied(filter.trim());
-      setFilter('');
-    } finally {
-      setBusy(null);
-    }
+    filterMut.mutate(
+      { id: initial.job.id, prompt: filter.trim() },
+      {
+        onSuccess: (out) => {
+          setResults(out.results);
+          setFilterMode(out.mode);
+          setApplied(filter.trim());
+          setFilter('');
+        },
+      },
+    );
   }
 
   return (

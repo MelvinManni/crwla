@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Archive, Pencil, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -19,7 +18,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { api } from '@/lib/api';
+import {
+  useArchivePlan,
+  useRestorePlan,
+  useSavePlan,
+  useSyncPlanToPolar,
+} from '@/lib/queries/admin';
 
 export type AdminPlan = {
   id: string;
@@ -44,61 +48,68 @@ export function AdminBillingClient({
   initialPlans: AdminPlan[];
   polarConfigured: boolean;
 }) {
-  const router = useRouter();
   const { toast } = useToast();
+  // We render the plan list straight from SSR initialData. Mutations
+  // invalidate the admin-billing-plans query so any future fetch is fresh.
+  // The page is server-rendered so an explicit `router.refresh()` happens
+  // on dialog close to pull the next render's data.
   const [plans, setPlans] = useState(initialPlans);
   const [editing, setEditing] = useState<AdminPlan | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
 
-  async function archive(p: AdminPlan) {
+  const archiveMut = useArchivePlan();
+  const restoreMut = useRestorePlan();
+  const syncMut = useSyncPlanToPolar();
+
+  const busy = archiveMut.isPending
+    ? archiveMut.variables ?? null
+    : restoreMut.isPending
+      ? restoreMut.variables ?? null
+      : syncMut.isPending
+        ? syncMut.variables ?? null
+        : null;
+
+  function archive(p: AdminPlan) {
     if (!confirm(`Archive ${p.name}? Existing subscribers keep it; pickers hide it.`)) return;
-    setBusy(p.id);
-    try {
-      const updated = await api.post<AdminPlan>(`/admin/billing/plans/${p.id}/archive`);
-      setPlans((arr) => arr.map((x) => (x.id === p.id ? updated : x)));
-      toast({ title: 'Archived', description: `${p.name} hidden from pickers.` });
-    } catch (e) {
-      toast({ title: 'Archive failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+    archiveMut.mutate(p.id, {
+      onSuccess: (updated) => {
+        setPlans((arr) => arr.map((x) => (x.id === p.id ? updated : x)));
+        toast({ title: 'Archived', description: `${p.name} hidden from pickers.` });
+      },
+      onError: (e) =>
+        toast({ title: 'Archive failed', description: (e as Error).message, variant: 'destructive' }),
+    });
   }
 
-  async function restore(p: AdminPlan) {
-    setBusy(p.id);
-    try {
-      const updated = await api.post<AdminPlan>(`/admin/billing/plans/${p.id}/restore`);
-      setPlans((arr) => arr.map((x) => (x.id === p.id ? updated : x)));
-      toast({ title: 'Restored' });
-    } catch (e) {
-      toast({ title: 'Restore failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+  function restore(p: AdminPlan) {
+    restoreMut.mutate(p.id, {
+      onSuccess: (updated) => {
+        setPlans((arr) => arr.map((x) => (x.id === p.id ? updated : x)));
+        toast({ title: 'Restored' });
+      },
+      onError: (e) =>
+        toast({ title: 'Restore failed', description: (e as Error).message, variant: 'destructive' }),
+    });
   }
 
-  async function syncPolar(p: AdminPlan) {
-    setBusy(p.id);
-    try {
-      const updated = await api.post<AdminPlan>(`/admin/billing/plans/${p.id}/sync-polar`);
-      setPlans((arr) => arr.map((x) => (x.id === p.id ? updated : x)));
-      toast({
-        title: 'Polar synced',
-        description: updated.polarProductId
-          ? `Product ${updated.polarProductId.slice(0, 12)}…`
-          : 'No product (FREE)',
-      });
-    } catch (e) {
-      toast({ title: 'Sync failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+  function syncPolar(p: AdminPlan) {
+    syncMut.mutate(p.id, {
+      onSuccess: (updated) => {
+        setPlans((arr) => arr.map((x) => (x.id === p.id ? updated : x)));
+        toast({
+          title: 'Polar synced',
+          description: updated.polarProductId
+            ? `Product ${updated.polarProductId.slice(0, 12)}…`
+            : 'No product (FREE)',
+        });
+      },
+      onError: (e) =>
+        toast({ title: 'Sync failed', description: (e as Error).message, variant: 'destructive' }),
+    });
   }
 
   function onSaved(updated: AdminPlan) {
     setPlans((arr) => arr.map((x) => (x.id === updated.id ? updated : x)));
     setEditing(null);
-    router.refresh();
   }
 
   return (
@@ -228,6 +239,7 @@ function EditDialog({
   onSaved: (next: AdminPlan) => void;
 }) {
   const { toast } = useToast();
+  const saveMut = useSavePlan();
   const [name, setName] = useState(plan.name);
   const [description, setDescription] = useState(plan.description ?? '');
   const [priceMonthly, setPriceMonthly] = useState(
@@ -238,9 +250,9 @@ function EditDialog({
   );
   const [features, setFeatures] = useState(plan.features.join('\n'));
   const [limits, setLimits] = useState(JSON.stringify(plan.limits, null, 2));
-  const [busy, setBusy] = useState(false);
+  const busy = saveMut.isPending;
 
-  async function save() {
+  function save() {
     let parsedLimits: Record<string, unknown>;
     try {
       parsedLimits = JSON.parse(limits);
@@ -248,43 +260,42 @@ function EditDialog({
       toast({ title: 'Limits must be valid JSON', variant: 'destructive' });
       return;
     }
-    setBusy(true);
-    try {
-      const updated = await api.patch<AdminPlan & { polarSyncError?: string }>(
-        `/admin/billing/plans/${plan.id}`,
-        {
-          name: name.trim(),
-          description: description.trim(),
-          priceMonthlyCents: Math.round(Number(priceMonthly) * 100),
-          priceYearlyCents: Math.round(Number(priceYearly) * 100),
-          features: features.split('\n').map((f) => f.trim()).filter(Boolean),
-          limits: parsedLimits,
+    saveMut.mutate(
+      {
+        id: plan.id,
+        name: name.trim(),
+        description: description.trim(),
+        priceMonthlyCents: Math.round(Number(priceMonthly) * 100),
+        priceYearlyCents: Math.round(Number(priceYearly) * 100),
+        features: features.split('\n').map((f) => f.trim()).filter(Boolean),
+        limits: parsedLimits,
+      },
+      {
+        onSuccess: (updated) => {
+          // Three save outcomes:
+          //   1. Polar synced and we know the product id  → "Saved · polar: prod_…"
+          //   2. Polar wasn't configured / errored        → warn toast, still saved
+          //   3. Free tier (no sync attempted)            → plain "Saved"
+          if (updated.polarSyncError) {
+            toast({
+              title: 'Saved (Polar sync failed)',
+              description: updated.polarSyncError,
+              variant: 'destructive',
+            });
+          } else if (updated.polarProductId) {
+            toast({
+              title: 'Saved',
+              description: `Polar product ${updated.polarProductId.slice(0, 14)}…`,
+            });
+          } else {
+            toast({ title: 'Saved' });
+          }
+          onSaved(updated);
         },
-      );
-      // Three save outcomes:
-      //   1. Polar synced and we know the product id  → "Saved · polar: prod_…"
-      //   2. Polar wasn't configured / errored        → warn toast, still saved
-      //   3. Free tier (no sync attempted)            → plain "Saved"
-      if (updated.polarSyncError) {
-        toast({
-          title: 'Saved (Polar sync failed)',
-          description: updated.polarSyncError,
-          variant: 'destructive',
-        });
-      } else if (updated.polarProductId) {
-        toast({
-          title: 'Saved',
-          description: `Polar product ${updated.polarProductId.slice(0, 14)}…`,
-        });
-      } else {
-        toast({ title: 'Saved' });
-      }
-      onSaved(updated);
-    } catch (e) {
-      toast({ title: 'Save failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(false);
-    }
+        onError: (e) =>
+          toast({ title: 'Save failed', description: (e as Error).message, variant: 'destructive' }),
+      },
+    );
   }
 
   return (

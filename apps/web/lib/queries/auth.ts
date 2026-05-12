@@ -20,3 +20,17 @@ export function useSignout() {
     },
   });
 }
+
+export type RequestAccessInput = {
+  name: string;
+  email: string;
+  password: string;
+  team: string;
+  reason: string;
+};
+
+export function useRequestAccess() {
+  return useMutation({
+    mutationFn: (input: RequestAccessInput) => api.post<void>('/auth/request-access', input),
+  });
+}

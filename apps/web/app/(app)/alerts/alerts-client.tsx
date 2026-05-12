@@ -31,14 +31,20 @@ import { ViewToggle, type ViewMode } from '@/components/view-toggle';
 import { Pagination } from '@/components/pagination';
 import { buildListSearch, type ListParams } from '@/lib/list-state';
 import { useToast } from '@/hooks/use-toast';
-import { api } from '@/lib/api';
+import {
+  useAlerts,
+  useCreateAlert,
+  useDeleteAlert,
+  useUpdateAlert,
+  type AlertsListResponse,
+} from '@/lib/queries/alerts';
 import type { AlertView } from './page';
 
 type Frequency = 'REALTIME' | 'HOURLY' | 'DAILY';
 
 export function AlertsClient({
   initialAlerts,
-  total,
+  total: initialTotal,
   listParams,
 }: {
   initialAlerts: AlertView[];
@@ -47,10 +53,34 @@ export function AlertsClient({
 }) {
   const router = useRouter();
   const { toast } = useToast();
-  const [alerts, setAlerts] = useState(initialAlerts);
+
+  // Seed the list query from SSR so mutations can invalidate cleanly.
+  const initialData: AlertsListResponse = {
+    alerts: initialAlerts,
+    total: initialTotal,
+    page: listParams.page,
+    pageSize: listParams.pageSize,
+    hasMore: false,
+  };
+  const listQuery = useAlerts(listParams, { initialData });
+  const alerts = listQuery.data?.alerts ?? initialAlerts;
+  const total = listQuery.data?.total ?? initialTotal;
+
+  const createMut = useCreateAlert();
+  const updateMut = useUpdateAlert();
+  const deleteMut = useDeleteAlert();
+
   const [keyword, setKeyword] = useState('');
   const [frequency, setFrequency] = useState<Frequency>('DAILY');
-  const [busy, setBusy] = useState<string | null>(null);
+
+  const busy =
+    createMut.isPending
+      ? 'create'
+      : updateMut.isPending
+        ? updateMut.variables?.id ?? null
+        : deleteMut.isPending
+          ? deleteMut.variables ?? null
+          : null;
 
   function setView(next: ViewMode) {
     router.push(buildListSearch('/alerts', { view: next, page: 1 }, listParams) as never);
@@ -59,49 +89,37 @@ export function AlertsClient({
     router.push(buildListSearch('/alerts', { page: next }, listParams) as never);
   }
 
-  async function create() {
+  function create() {
     if (!keyword.trim()) return;
-    setBusy('create');
-    try {
-      const created = await api.post<AlertView>('/alerts', {
-        keyword: keyword.trim(),
-        frequency,
-      });
-      setAlerts((a) => [created, ...a]);
-      setKeyword('');
-      toast({ title: 'Alert created' });
-      router.refresh();
-    } catch (e) {
-      toast({ title: 'Create failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+    createMut.mutate(
+      { keyword: keyword.trim(), frequency },
+      {
+        onSuccess: () => {
+          setKeyword('');
+          toast({ title: 'Alert created' });
+        },
+        onError: (e) =>
+          toast({ title: 'Create failed', description: (e as Error).message, variant: 'destructive' }),
+      },
+    );
   }
 
-  async function toggle(a: AlertView) {
-    setBusy(a.id);
-    try {
-      await api.patch(`/alerts/${a.id}`, { active: !a.active });
-      setAlerts((arr) => arr.map((x) => (x.id === a.id ? { ...x, active: !a.active } : x)));
-    } catch (e) {
-      toast({ title: 'Update failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+  function toggle(a: AlertView) {
+    updateMut.mutate(
+      { id: a.id, active: !a.active },
+      {
+        onError: (e) =>
+          toast({ title: 'Update failed', description: (e as Error).message, variant: 'destructive' }),
+      },
+    );
   }
 
-  async function remove(id: string) {
-    setBusy(id);
-    try {
-      await api.delete(`/alerts/${id}`);
-      setAlerts((arr) => arr.filter((x) => x.id !== id));
-      toast({ title: 'Alert removed' });
-      router.refresh();
-    } catch (e) {
-      toast({ title: 'Delete failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+  function remove(id: string) {
+    deleteMut.mutate(id, {
+      onSuccess: () => toast({ title: 'Alert removed' }),
+      onError: (e) =>
+        toast({ title: 'Delete failed', description: (e as Error).message, variant: 'destructive' }),
+    });
   }
 
   return (

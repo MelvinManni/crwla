@@ -1,8 +1,10 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Lock } from 'lucide-react';
-import { api } from '@/lib/api';
+import { useBillingMe } from '@/lib/queries/billing';
+import { qk } from '@/lib/queries/keys';
 import { cn } from '@/lib/utils';
 
 export type PlanLimits = {
@@ -52,22 +54,22 @@ const Ctx = createContext<{ ent: Entitlements | null; refresh: () => void }>({
 });
 
 export function EntitlementsProvider({ children }: { children: ReactNode }) {
-  const [ent, setEnt] = useState<Entitlements | null>(null);
+  const qc = useQueryClient();
+  // Fail-soft: if the request errors (eg. user just signed out) we surface
+  // ent=null so lock badges just don't render — same behavior as before.
+  const { data } = useBillingMe();
 
-  async function load() {
-    try {
-      const out = await api.get<Entitlements>('/billing/me');
-      setEnt(out);
-    } catch {
-      // fail-soft: page still works, lock badges just won't render
-    }
-  }
+  const value = useMemo(
+    () => ({
+      ent: data ?? null,
+      refresh: () => {
+        qc.invalidateQueries({ queryKey: qk.billing.me() });
+      },
+    }),
+    [data, qc],
+  );
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  return <Ctx.Provider value={{ ent, refresh: load }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useEntitlements() {

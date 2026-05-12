@@ -25,11 +25,11 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/types";
 import Link from "next/link";
 import { useStartCrawl } from "@/components/start-crawl-modal";
+import { useSignout } from "@/lib/queries/auth";
 
 type NavItem = {
   href: __next_route_internal_types__.RouteImpl<string>;
@@ -65,18 +65,19 @@ export function AppSidebar({ user }: { user: SessionUser }) {
   const pathname = usePathname();
   const router = useRouter();
   const { open: openStartCrawl } = useStartCrawl();
+  const signoutMut = useSignout();
   const isActive = (href: string) =>
     href === "/dashboard"
       ? pathname === href
       : pathname === href || pathname.startsWith(`${href}/`);
 
-  async function signOut() {
-    try {
-      await api.post("/auth/signout");
-    } finally {
-      router.push("/signin");
-      router.refresh();
-    }
+  function signOut() {
+    signoutMut.mutate(undefined, {
+      onSettled: () => {
+        router.push("/signin");
+        router.refresh();
+      },
+    });
   }
 
   return (

@@ -1,14 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import {
+  useAccessRequests,
+  useAdminUsers,
+  useApproveAccessRequest,
+  useDenyAccessRequest,
+  useUpdateAdminUser,
+} from '@/lib/queries/admin';
 import type { AccessRequestView, UserAdminView } from '@/lib/types';
 import { RequestDetailDrawer } from './request-detail-drawer';
 import { MemberDetailDrawer } from './member-detail-drawer';
@@ -20,89 +26,91 @@ export function AdminClient({
   initialRequests: AccessRequestView[];
   initialUsers: UserAdminView[];
 }) {
-  const router = useRouter();
   const search = useSearchParams();
   const initialTab = search.get('tab') === 'members' ? 'members' : 'requests';
   const { toast } = useToast();
-  const [requests, setRequests] = useState(initialRequests);
-  const [users, setUsers] = useState(initialUsers);
-  const [busy, setBusy] = useState<string | null>(null);
+
+  const requestsQuery = useAccessRequests({ initialData: { requests: initialRequests } });
+  const usersQuery = useAdminUsers({ initialData: { users: initialUsers } });
+  const approveMut = useApproveAccessRequest();
+  const denyMut = useDenyAccessRequest();
+  const updateUserMut = useUpdateAdminUser();
+
+  const requests = requestsQuery.data?.requests ?? initialRequests;
+  const users = usersQuery.data?.users ?? initialUsers;
+  // A single string holds the id of whatever row is currently mutating, so the
+  // row-level buttons can show their own spinners. `null` means idle.
+  const busy =
+    approveMut.isPending
+      ? approveMut.variables ?? null
+      : denyMut.isPending
+        ? denyMut.variables ?? null
+        : updateUserMut.isPending
+          ? updateUserMut.variables?.id ?? null
+          : null;
+
   const [openRequest, setOpenRequest] = useState<AccessRequestView | null>(null);
   const [openMember, setOpenMember] = useState<UserAdminView | null>(null);
 
-  async function approve(id: string) {
-    setBusy(id);
-    try {
-      await api.post(`/admin/requests/${id}/approve`);
-      setRequests((r) => r.filter((x) => x.id !== id));
-      setOpenRequest((cur) => (cur?.id === id ? null : cur));
-      toast({ title: 'Approved', description: 'Member created.' });
-      router.refresh();
-    } catch (e) {
-      toast({ title: 'Approve failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+  function approve(id: string) {
+    approveMut.mutate(id, {
+      onSuccess: () => {
+        setOpenRequest((cur) => (cur?.id === id ? null : cur));
+        toast({ title: 'Approved', description: 'Member created.' });
+      },
+      onError: (e) =>
+        toast({ title: 'Approve failed', description: (e as Error).message, variant: 'destructive' }),
+    });
   }
 
-  async function deny(id: string) {
-    setBusy(id);
-    try {
-      await api.post(`/admin/requests/${id}/deny`);
-      setRequests((r) => r.filter((x) => x.id !== id));
-      setOpenRequest((cur) => (cur?.id === id ? null : cur));
-      toast({ title: 'Denied' });
-    } catch (e) {
-      toast({ title: 'Deny failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+  function deny(id: string) {
+    denyMut.mutate(id, {
+      onSuccess: () => {
+        setOpenRequest((cur) => (cur?.id === id ? null : cur));
+        toast({ title: 'Denied' });
+      },
+      onError: (e) =>
+        toast({ title: 'Deny failed', description: (e as Error).message, variant: 'destructive' }),
+    });
   }
 
-  async function toggleActive(u: UserAdminView) {
-    setBusy(u.id);
-    try {
-      await api.patch(`/admin/users/${u.id}`, { active: !u.active });
-      const next = { ...u, active: !u.active };
-      setUsers((arr) => arr.map((x) => (x.id === u.id ? next : x)));
-      setOpenMember((cur) => (cur?.id === u.id ? next : cur));
-    } catch (e) {
-      toast({ title: 'Update failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+  function toggleActive(u: UserAdminView) {
+    updateUserMut.mutate(
+      { id: u.id, active: !u.active },
+      {
+        onSuccess: () => setOpenMember((cur) => (cur?.id === u.id ? { ...u, active: !u.active } : cur)),
+        onError: (e) =>
+          toast({ title: 'Update failed', description: (e as Error).message, variant: 'destructive' }),
+      },
+    );
   }
 
-  async function changeRole(u: UserAdminView, role: 'admin' | 'member') {
-    setBusy(u.id);
-    try {
-      await api.patch(`/admin/users/${u.id}`, { role });
-      const next: UserAdminView = { ...u, role: role === 'admin' ? 'Admin' : 'Member' };
-      setUsers((arr) => arr.map((x) => (x.id === u.id ? next : x)));
-      setOpenMember((cur) => (cur?.id === u.id ? next : cur));
-    } catch (e) {
-      toast({ title: 'Update failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+  function changeRole(u: UserAdminView, role: 'admin' | 'member') {
+    const next: UserAdminView = { ...u, role: role === 'admin' ? 'Admin' : 'Member' };
+    updateUserMut.mutate(
+      { id: u.id, role },
+      {
+        onSuccess: () => setOpenMember((cur) => (cur?.id === u.id ? next : cur)),
+        onError: (e) =>
+          toast({ title: 'Update failed', description: (e as Error).message, variant: 'destructive' }),
+      },
+    );
   }
 
-  async function toggleCategory(u: UserAdminView, category: string) {
-    setBusy(u.id);
+  function toggleCategory(u: UserAdminView, category: string) {
     const current = u.disabledSourceCategories ?? [];
     const nextCats = current.includes(category)
       ? current.filter((c) => c !== category)
       : [...current, category];
-    try {
-      await api.patch(`/admin/users/${u.id}`, { disabledSourceCategories: nextCats });
-      const next = { ...u, disabledSourceCategories: nextCats };
-      setUsers((arr) => arr.map((x) => (x.id === u.id ? next : x)));
-      setOpenMember((cur) => (cur?.id === u.id ? next : cur));
-    } catch (e) {
-      toast({ title: 'Update failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+    updateUserMut.mutate(
+      { id: u.id, disabledSourceCategories: nextCats },
+      {
+        onSuccess: () =>
+          setOpenMember((cur) => (cur?.id === u.id ? { ...u, disabledSourceCategories: nextCats } : cur)),
+        onError: (e) =>
+          toast({ title: 'Update failed', description: (e as Error).message, variant: 'destructive' }),
+      },
+    );
   }
 
   return (

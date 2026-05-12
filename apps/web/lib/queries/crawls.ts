@@ -105,3 +105,32 @@ export function useApplyCrawlFilter() {
       ),
   });
 }
+
+export type CrawlResultsResponse = {
+  job: {
+    id: string;
+    name: string;
+    cron: string;
+    filterPrompt: string;
+    status: string;
+    keywords: string[];
+    lastRun: string;
+  };
+  results: ResultView[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+};
+
+/**
+ * Shared options for `qc.fetchQuery` / `useQuery` consumers that want the
+ * latest results for a crawl. Keeps the key + fetcher in one place so
+ * imperative refetches and declarative reads agree.
+ */
+export function crawlResultsQuery(id: string) {
+  return {
+    queryKey: ['searches', 'results', id, 'live'] as const,
+    queryFn: () => api.get<CrawlResultsResponse>(`/searches/${id}/results`),
+  };
+}

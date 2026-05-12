@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { api } from '@/lib/api';
+import { useRequestAccess } from '@/lib/queries/auth';
 
 export default function RequestAccessPage() {
   const [name, setName] = useState('');
@@ -15,11 +15,13 @@ export default function RequestAccessPage() {
   const [password, setPassword] = useState('');
   const [team, setTeam] = useState('');
   const [reason, setReason] = useState('');
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const requestAccess = useRequestAccess();
+  const busy = requestAccess.isPending;
+  const done = requestAccess.isSuccess;
 
-  async function submit() {
+  function submit() {
+    if (busy) return;
     if (!name || !email || !password) {
       setError('name, email, and password required');
       return;
@@ -29,15 +31,10 @@ export default function RequestAccessPage() {
       return;
     }
     setError(null);
-    setBusy(true);
-    try {
-      await api.post('/auth/request-access', { name, email, password, team, reason });
-      setDone(true);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    requestAccess.mutate(
+      { name, email, password, team, reason },
+      { onError: (e) => setError((e as Error).message) },
+    );
   }
 
   if (done) {
