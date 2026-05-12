@@ -13,7 +13,6 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { UpgradeModalProvider } from "@/components/billing/upgrade-modal";
 import { EntitlementsProvider } from "@/components/billing/entitlements-provider";
 import { StartCrawlProvider } from "@/components/start-crawl-modal";
-import { MobileFab } from "@/components/shell/mobile-fab";
 
 export default async function AppLayout({
   children,
@@ -40,7 +39,6 @@ export default async function AppLayout({
                   <span className="text-sm text-muted-foreground">CRWLA</span>
                 </header>
                 <div className="flex-1">{children}</div>
-                <MobileFab />
               </SidebarInset>
             </SidebarProvider>
           </StartCrawlProvider>

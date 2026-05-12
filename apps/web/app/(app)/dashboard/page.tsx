@@ -5,6 +5,7 @@ import { requireSession } from '@/lib/auth';
 import { parseListParams } from '@/lib/list-state';
 import type { CrawlsListResponse } from '@/lib/queries/crawls';
 import { DashboardClient } from './dashboard-client';
+import { MobileFab } from '@/components/shell/mobile-fab';
 
 export default async function DashboardPage({
   searchParams,
@@ -44,6 +45,7 @@ export default async function DashboardPage({
       </div>
 
       <DashboardClient initialData={out} listParams={params} />
+      <MobileFab />
     </div>
   );
 }
