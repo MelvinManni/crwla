@@ -54,6 +54,40 @@ type Initial = {
 type SortKey = 'source' | 'title' | 'when';
 type SortDir = 'asc' | 'desc';
 
+// Google's CDNs serve the news-carousel thumbnails and the
+// `s2/favicons` proxy our scraper falls back to. We treat those as "no
+// cover image" on the client so the row reaches for the article site's
+// own favicon instead.
+const GOOGLE_THUMB_HOSTS =
+  /(^|\.)google\.com$|(^|\.)gstatic\.com$|(^|\.)googleusercontent\.com$/i;
+
+function isGoogleThumb(url: string): boolean {
+  try {
+    return GOOGLE_THUMB_HOSTS.test(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
+function siteFavicon(articleUrl: string): string | null {
+  try {
+    return `https://icons.duckduckgo.com/ip3/${new URL(articleUrl).hostname}.ico`;
+  } catch {
+    return null;
+  }
+}
+
+type Thumb =
+  | { kind: 'cover'; src: string }
+  | { kind: 'site'; src: string }
+  | { kind: 'none' };
+
+function pickThumbnail(r: ResultView): Thumb {
+  if (r.image && !isGoogleThumb(r.image)) return { kind: 'cover', src: r.image };
+  const fav = siteFavicon(r.url);
+  return fav ? { kind: 'site', src: fav } : { kind: 'none' };
+}
+
 const EXPORT_COLUMNS: ExportColumn<ResultView>[] = [
   { header: 'Source', value: (r) => r.source },
   { header: 'Title', value: (r) => r.title },
@@ -79,6 +113,10 @@ export function ResultsClient({
   const runMut = useRunCrawl();
   const filterMut = useApplyCrawlFilter();
   const [results, setResults] = useState(initial.results);
+  // Header count must reflect the total stored results for this crawl, not
+  // the loaded-page count or the active filter subset. We track it so a
+  // run-now refresh updates the header.
+  const [totalResults, setTotalResults] = useState(initial.total);
   const [filter, setFilter] = useState('');
   const [applied, setApplied] = useState(initial.job.filterPrompt || null);
   const [filterMode, setFilterMode] = useState<string | null>(null);
@@ -99,6 +137,7 @@ export function ResultsClient({
     // cache instead of round-tripping.
     const out = await qc.fetchQuery(crawlResultsQuery(initial.job.id));
     setResults(out.results);
+    setTotalResults(out.total);
     qc.invalidateQueries({ queryKey: ['searches', 'results', initial.job.id] });
     router.refresh();
   }
@@ -172,7 +211,7 @@ export function ResultsClient({
               {initial.job.name}
             </h1>
             <p className="mt-0.5 font-mono text-[11px] text-fg-subtle">
-              {results.length} results · {initial.job.cron.toLowerCase()} · last run{' '}
+              {totalResults} results · {initial.job.cron.toLowerCase()} · last run{' '}
               {initial.job.lastRun}
             </p>
           </div>
@@ -490,16 +529,7 @@ function ResultsPanel({
               rel="noreferrer"
               className="flex gap-3.5 border-b border-border bg-bg px-4 py-4 last:border-b-0 hover:bg-bg-elev"
             >
-              {r.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={r.image}
-                  alt=""
-                  className="h-[76px] w-[76px] shrink-0 rounded-md border border-border object-cover"
-                />
-              ) : (
-                <div className="thumb-striped h-[76px] w-[76px] shrink-0 overflow-hidden rounded-md border border-border" />
-              )}
+              <ResultThumb r={r} />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.06em] text-fg-muted">
                   <span className="truncate">{r.source}</span>
@@ -572,5 +602,43 @@ function SortableHead({
         )}
       </button>
     </TableHead>
+  );
+}
+
+function ResultThumb({ r }: { r: ResultView }) {
+  // Start from the best candidate, downgrade on image-load errors.
+  const initial = pickThumbnail(r);
+  const [thumb, setThumb] = useState<Thumb>(initial);
+
+  if (thumb.kind === 'none') {
+    return (
+      <div className="thumb-striped h-[76px] w-[76px] shrink-0 overflow-hidden rounded-md border border-border" />
+    );
+  }
+
+  const isSite = thumb.kind === 'site';
+  return (
+    <div
+      className={cn(
+        'grid h-[76px] w-[76px] shrink-0 overflow-hidden rounded-md border border-border',
+        isSite ? 'place-items-center bg-bg-sunk' : '',
+      )}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={thumb.src}
+        alt=""
+        className={cn(isSite ? 'h-9 w-9 object-contain' : 'h-full w-full object-cover')}
+        onError={() => {
+          // Cover failed → try the site favicon. Site favicon failed → striped.
+          if (thumb.kind === 'cover') {
+            const fav = siteFavicon(r.url);
+            setThumb(fav ? { kind: 'site', src: fav } : { kind: 'none' });
+          } else {
+            setThumb({ kind: 'none' });
+          }
+        }}
+      />
+    </div>
   );
 }
