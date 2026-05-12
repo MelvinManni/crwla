@@ -1,0 +1,107 @@
+'use client';
+
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { qk } from './keys';
+import type { ListParams } from '@/lib/list-state';
+import type { CronPreset, ResultView, SearchView } from '@/lib/types';
+
+export type CrawlsListResponse = {
+  jobs: SearchView[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+};
+
+function buildListQs(p: ListParams): string {
+  const qs = new URLSearchParams();
+  qs.set('page', String(p.page));
+  qs.set('pageSize', String(p.pageSize));
+  if (p.q) qs.set('q', p.q);
+  if (p.keyword) qs.set('keyword', p.keyword);
+  if (p.time !== 'all') qs.set('time', p.time);
+  return qs.toString();
+}
+
+export function useCrawls(
+  params: ListParams,
+  opts?: { initialData?: CrawlsListResponse },
+) {
+  return useQuery({
+    queryKey: qk.searches.list(params),
+    queryFn: () => api.get<CrawlsListResponse>(`/searches?${buildListQs(params)}`),
+    initialData: opts?.initialData,
+    staleTime: 30_000,
+  });
+}
+
+export type CreateCrawlInput = {
+  name: string;
+  keywords: string[];
+  cron: CronPreset;
+  filterPrompt?: string;
+};
+
+export function useCreateCrawl() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateCrawlInput) =>
+      api.post<{ job: SearchView }>('/searches', input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['searches'] });
+    },
+  });
+}
+
+export type UpdateCrawlInput = {
+  id: string;
+  name?: string;
+  keywords?: string[];
+  cron?: CronPreset;
+  filterPrompt?: string;
+  status?: 'RUNNING' | 'PAUSED';
+};
+
+export function useUpdateCrawl() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: UpdateCrawlInput) =>
+      api.patch<{ job: SearchView }>(`/searches/${id}`, body),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['searches'] });
+      qc.invalidateQueries({ queryKey: qk.searches.detail(vars.id) });
+    },
+  });
+}
+
+export function useDeleteCrawl() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/searches/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['searches'] });
+    },
+  });
+}
+
+export function useRunCrawl() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<void>(`/searches/${id}/run`),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: qk.searches.detail(id) });
+      qc.invalidateQueries({ queryKey: ['searches', 'results', id] });
+    },
+  });
+}
+
+export function useApplyCrawlFilter() {
+  return useMutation({
+    mutationFn: ({ id, prompt }: { id: string; prompt: string }) =>
+      api.post<{ results: ResultView[]; mode: string }>(
+        `/searches/${id}/filter`,
+        { prompt },
+      ),
+  });
+}

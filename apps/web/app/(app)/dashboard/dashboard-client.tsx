@@ -20,6 +20,7 @@ import { ListFilterBar, type ListFilters } from '@/components/list-filter-bar';
 import { buildListSearch, type ListParams } from '@/lib/list-state';
 import { exportCsv, exportXls, type ExportColumn } from '@/lib/export';
 import { cn } from '@/lib/utils';
+import { useCrawls, type CrawlsListResponse } from '@/lib/queries/crawls';
 import type { SearchView } from '@/lib/types';
 
 type SortKey = 'name' | 'lastRun' | 'results' | 'status';
@@ -40,16 +41,20 @@ const EXPORT_COLUMNS: ExportColumn<SearchView>[] = [
 ];
 
 export function DashboardClient({
-  initial,
-  total,
+  initialData,
   listParams,
 }: {
-  initial: SearchView[];
-  total: number;
+  initialData: CrawlsListResponse;
   listParams: ListParams;
 }) {
   const router = useRouter();
   const { page, pageSize, view } = listParams;
+  // SSR fetched the data already — seed the query cache so subsequent
+  // mutations (start crawl, delete crawl) can invalidate this key and
+  // trigger a fresh fetch without a full page reload.
+  const { data } = useCrawls(listParams, { initialData });
+  const jobs = data?.jobs ?? initialData.jobs;
+  const total = data?.total ?? initialData.total;
 
   // Filter state mirrors the URL but the query input is debounced — typing
   // shouldn't trigger a server fetch on every keystroke.
@@ -99,14 +104,14 @@ export function DashboardClient({
 
   const allKeywords = useMemo(() => {
     const set = new Set<string>();
-    for (const s of initial) for (const k of s.keywords) set.add(k);
+    for (const s of jobs) for (const k of s.keywords) set.add(k);
     if (filters.keyword) set.add(filters.keyword);
     return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [initial, filters.keyword]);
+  }, [jobs, filters.keyword]);
 
   const sorted = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
-    const out = [...initial];
+    const out = [...jobs];
     out.sort((a, b) => {
       switch (sortKey) {
         case 'name':
@@ -121,7 +126,7 @@ export function DashboardClient({
       }
     });
     return out;
-  }, [initial, sortKey, sortDir]);
+  }, [jobs, sortKey, sortDir]);
 
   function setView(next: ViewMode) {
     router.push(

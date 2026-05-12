@@ -23,51 +23,54 @@ import {
 import { KeywordInput } from '@/components/keyword-input';
 import { CronPicker } from '@/components/cron-picker';
 import { useToast } from '@/hooks/use-toast';
-import { api } from '@/lib/api';
+import { useDeleteCrawl, useUpdateCrawl } from '@/lib/queries/crawls';
 import type { CronPreset, SearchView } from '@/lib/types';
 
 export function EditSearchClient({ initial }: { initial: SearchView }) {
   const router = useRouter();
   const { toast } = useToast();
+  const update = useUpdateCrawl();
+  const remove = useDeleteCrawl();
   const [name, setName] = useState(initial.name);
   const [keywords, setKeywords] = useState<string[]>(initial.keywords);
   const [cron, setCron] = useState<CronPreset>(initial.cron);
   const [filterPrompt, setFilterPrompt] = useState(initial.filterPrompt);
   const [paused, setPaused] = useState(initial.status === 'PAUSED');
-  const [busy, setBusy] = useState<'save' | 'delete' | null>(null);
 
-  async function save() {
-    setBusy('save');
-    try {
-      await api.patch(`/searches/${initial.id}`, {
+  const saving = update.isPending;
+  const deleting = remove.isPending;
+  const anyBusy = saving || deleting;
+
+  function save() {
+    update.mutate(
+      {
+        id: initial.id,
         name: name.trim(),
         keywords,
         cron,
         filterPrompt,
         status: paused ? 'PAUSED' : 'RUNNING',
-      });
-      toast({ title: 'Saved' });
-      router.push(`/crawls/${initial.id}` as never);
-      router.refresh();
-    } catch (e) {
-      toast({ title: 'Save failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+      },
+      {
+        onSuccess: () => {
+          toast({ title: 'Saved' });
+          router.push(`/crawls/${initial.id}` as never);
+        },
+        onError: (e) =>
+          toast({ title: 'Save failed', description: (e as Error).message, variant: 'destructive' }),
+      },
+    );
   }
 
-  async function remove() {
-    setBusy('delete');
-    try {
-      await api.delete(`/searches/${initial.id}`);
-      toast({ title: 'Deleted' });
-      router.push('/dashboard');
-      router.refresh();
-    } catch (e) {
-      toast({ title: 'Delete failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
+  function onDelete() {
+    remove.mutate(initial.id, {
+      onSuccess: () => {
+        toast({ title: 'Deleted' });
+        router.push('/dashboard');
+      },
+      onError: (e) =>
+        toast({ title: 'Delete failed', description: (e as Error).message, variant: 'destructive' }),
+    });
   }
 
   return (
@@ -80,7 +83,7 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
         <div className="flex gap-2">
           <AlertDialog>
             <AlertDialogTrigger
-              render={<Button variant="destructive" disabled={busy !== null} />}
+              render={<Button variant="destructive" disabled={anyBusy} />}
             >
               <Trash2 className="h-4 w-4" />
               Delete
@@ -94,13 +97,13 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={remove}>
-                  {busy === 'delete' ? <Spinner /> : 'Delete'}
+                <AlertDialogAction onClick={onDelete}>
+                  {deleting ? <Spinner /> : 'Delete'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <Button onClick={save} disabled={busy !== null} loading={busy === 'save'}>
+          <Button onClick={save} disabled={anyBusy} loading={saving}>
             Save
           </Button>
         </div>

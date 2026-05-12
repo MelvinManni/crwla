@@ -5,33 +5,36 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { api } from '@/lib/api';
-import type { SessionUser } from '@/lib/types';
+import { useSignin } from '@/lib/queries/auth';
 
 export default function SigninPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const signin = useSignin();
 
-  async function submit() {
+  function submit() {
+    if (signin.isPending || signin.isSuccess) return;
     if (!email || !password) {
       setError('email and password required');
       return;
     }
     setError(null);
-    setBusy(true);
-    try {
-      await api.post<{ user: SessionUser }>('/auth/signin', { email, password });
-      // Hard navigation so the browser sends a fresh request to /dashboard
-      // with the just-set crwla_token cookie. router.push + router.refresh
-      // races with cookie persistence and can bounce the user back to /signin
-      // via middleware.
-    } catch (e) {
-      setError((e as Error).message);
-      setBusy(false);
-    }
+    signin.mutate(
+      { email, password },
+      {
+        onSuccess: () => {
+          // Hard navigation so the browser re-issues a request to /dashboard
+          // with the just-set crwla_token cookie. `router.push` races with
+          // cookie persistence and can bounce the user back via middleware.
+          window.location.assign('/dashboard');
+        },
+        onError: (e) => setError((e as Error).message),
+      },
+    );
   }
+
+  const busy = signin.isPending || signin.isSuccess;
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-10">

@@ -2,6 +2,7 @@
 // /api/auth/me to validate. Used by the (app) layout and by any server
 // component that needs the session.
 
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { api } from './api';
@@ -9,7 +10,10 @@ import type { SessionUser } from './types';
 
 const COOKIE_NAME = 'crwla_token';
 
-export async function getSession(): Promise<SessionUser | null> {
+// Wrapped in `cache()` so the (app) layout + each (app) page calling
+// requireSession() collapses into a single /auth/me round-trip per
+// request. Was previously firing twice per navigation.
+export const getSession = cache(async function getSession(): Promise<SessionUser | null> {
   const jar = await cookies();
   const token = jar.get(COOKIE_NAME)?.value;
   if (!token) return null;
@@ -21,7 +25,7 @@ export async function getSession(): Promise<SessionUser | null> {
   } catch {
     return null;
   }
-}
+});
 
 export async function requireSession(): Promise<SessionUser> {
   const user = await getSession();

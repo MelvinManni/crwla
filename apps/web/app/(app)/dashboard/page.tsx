@@ -2,24 +2,15 @@ import { cookies } from 'next/headers';
 import { StartCrawlButton } from '@/components/start-crawl-button';
 import { api } from '@/lib/api';
 import { requireSession } from '@/lib/auth';
-import type { SearchView } from '@/lib/types';
 import { parseListParams } from '@/lib/list-state';
+import type { CrawlsListResponse } from '@/lib/queries/crawls';
 import { DashboardClient } from './dashboard-client';
-
-type ApiOut = {
-  jobs: SearchView[];
-  total: number;
-  page: number;
-  pageSize: number;
-  hasMore: boolean;
-};
 
 export default async function DashboardPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const user = await requireSession();
   const sp = await searchParams;
   const params = parseListParams(sp, { pageSize: 20, view: 'list' });
 
@@ -31,7 +22,14 @@ export default async function DashboardPage({
   if (params.q) qs.set('q', params.q);
   if (params.keyword) qs.set('keyword', params.keyword);
   if (params.time !== 'all') qs.set('time', params.time);
-  const out = await api.get<ApiOut>(`/searches?${qs.toString()}`, { cookie });
+
+  // Auth + list in parallel — both depend only on the cookie, neither
+  // gates the other for the rendered shell. Saves one round-trip vs the
+  // previous sequential `await requireSession()` then `await api.get(...)`.
+  const [user, out] = await Promise.all([
+    requireSession(),
+    api.get<CrawlsListResponse>(`/searches?${qs.toString()}`, { cookie }),
+  ]);
 
   return (
     <div className="mx-auto px-4 py-6 md:px-8">
@@ -45,7 +43,7 @@ export default async function DashboardPage({
         <StartCrawlButton hideOnMobile />
       </div>
 
-      <DashboardClient initial={out.jobs} total={out.total} listParams={params} />
+      <DashboardClient initialData={out} listParams={params} />
     </div>
   );
 }

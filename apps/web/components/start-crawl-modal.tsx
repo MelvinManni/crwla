@@ -23,8 +23,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { KeywordInput } from '@/components/keyword-input';
 import { CronPicker } from '@/components/cron-picker';
 import { useEntitlements } from '@/components/billing/entitlements-provider';
-import { api } from '@/lib/api';
-import type { CronPreset, SearchView } from '@/lib/types';
+import { useCreateCrawl } from '@/lib/queries/crawls';
+import type { CronPreset } from '@/lib/types';
 
 const CRON_PRIORITY: CronPreset[] = ['HOURLY', 'DAILY', 'WEEKLY', 'MANUAL'];
 const CATEGORY_LABEL: Record<string, string> = {
@@ -89,12 +89,12 @@ function StartCrawlDialog({
 }) {
   const router = useRouter();
   const { ent } = useEntitlements();
+  const createCrawl = useCreateCrawl();
   const [name, setName] = useState('');
   const [keywords, setKeywords] = useState<string[]>([]);
   const [cron, setCron] = useState<CronPreset>('DAILY');
   const [cronTouched, setCronTouched] = useState(false);
   const [filterPrompt, setFilterPrompt] = useState('');
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Reset form whenever the dialog opens.
@@ -105,8 +105,11 @@ function StartCrawlDialog({
       setCronTouched(false);
       setFilterPrompt('');
       setError(null);
-      setBusy(false);
+      createCrawl.reset();
     }
+    // We intentionally only react to `open` toggling — resetting on every
+    // render of the mutation would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -114,27 +117,22 @@ function StartCrawlDialog({
   }, [ent, cronTouched]);
 
   const allowed = ent?.limits.allowedSourceCategories ?? [];
+  const busy = createCrawl.isPending;
 
-  async function submit() {
+  function submit() {
     setError(null);
     if (!name.trim()) return setError('Name is required.');
     if (keywords.length === 0) return setError('Add at least one keyword.');
-    setBusy(true);
-    try {
-      const out = await api.post<{ job: SearchView }>('/searches', {
-        name: name.trim(),
-        keywords,
-        cron,
-        filterPrompt,
-      });
-      onOpenChange(false);
-      router.push(`/crawls/${out.job.id}` as never);
-      router.refresh();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    createCrawl.mutate(
+      { name: name.trim(), keywords, cron, filterPrompt },
+      {
+        onSuccess: (out) => {
+          onOpenChange(false);
+          router.push(`/crawls/${out.job.id}` as never);
+        },
+        onError: (e) => setError((e as Error).message),
+      },
+    );
   }
 
   return (
