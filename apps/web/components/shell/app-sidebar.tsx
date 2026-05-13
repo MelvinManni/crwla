@@ -164,17 +164,21 @@ export function AppSidebar({ user }: { user: SessionUser }) {
 
       <SidebarFooter className="border-t border-border px-3 py-3">
         <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:hidden">
-          <div className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full border border-border bg-bg-sunk text-[11px] font-medium text-fg-muted">
+          <Link
+            href="/profile"
+            className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full border border-border bg-bg-sunk text-[11px] font-medium text-fg-muted hover:bg-bg hover:text-fg"
+            aria-label="Profile"
+          >
             {initials(user.name)}
-          </div>
-          <div className="min-w-0 flex-1">
+          </Link>
+          <Link href="/profile" className="min-w-0 flex-1 hover:opacity-80">
             <div className="truncate text-[12px] font-medium text-fg">
               {user.name}
             </div>
             <div className="truncate font-mono text-[10px] text-fg-muted">
               {user.role.toLowerCase()}
             </div>
-          </div>
+          </Link>
           <button
             type="button"
             onClick={signOut}

@@ -96,6 +96,11 @@ model User {
   lastActiveAt DateTime? @map("last_active_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
+  /// Soft-delete marker. When set, the account is gone from the user's
+  /// perspective: signin is blocked (alongside `active=false`) and the
+  /// session resolver returns null. Row stays so audit/billing history
+  /// keeps its foreign keys.
+  deletedAt    DateTime? @map("deleted_at")
 
   /// Source categories this user is *not* allowed to crawl. Empty = all
   /// categories enabled. Values are SourceCategory strings (e.g. "social",
