@@ -60,7 +60,7 @@ export function ListFilterBar({
         className,
       )}
     >
-      <div className="relative min-w-[220px] flex-1">
+      <div className="relative w-full min-w-0 sm:w-auto sm:min-w-[220px] sm:flex-1">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
         <Input
           value={filters.query}
@@ -106,7 +106,9 @@ export function ListFilterBar({
         </button>
       )}
 
-      <div className="ml-auto flex items-center gap-1.5">
+      {/* Exports are desktop-only — saving a CSV/XLSX from a phone isn't a
+          common flow and the buttons crowd the bar on small screens. */}
+      <div className="ml-auto hidden items-center gap-1.5 md:flex">
         <Button
           variant="outline"
           onClick={onExportCsv}

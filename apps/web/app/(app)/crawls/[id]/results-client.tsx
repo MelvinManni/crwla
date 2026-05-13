@@ -265,7 +265,7 @@ export function ResultsClient({
               applied to {results.length} results
             </span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Textarea
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
@@ -276,7 +276,7 @@ export function ResultsClient({
               onClick={applyFilter}
               disabled={busy !== null || !filter.trim()}
               loading={busy === 'filter'}
-              className="rounded-lg bg-fg text-bg-elev hover:bg-fg/90"
+              className="rounded-lg bg-fg text-bg-elev hover:bg-fg/90 sm:self-start"
             >
               <Sparkles className="h-3 w-3" />
               Apply

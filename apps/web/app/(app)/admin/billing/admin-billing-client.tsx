@@ -136,9 +136,9 @@ export function AdminBillingClient({
       <div className="space-y-3">
         {plans.map((p) => (
           <Card key={p.id} className="p-4">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className="font-mono">
                     {p.tier}
                   </Badge>
@@ -161,7 +161,7 @@ export function AdminBillingClient({
                   {(p.priceYearlyCents / 100).toFixed(2)}/yr
                 </p>
               </div>
-              <div className="flex shrink-0 gap-2">
+              <div className="flex flex-wrap gap-2 md:shrink-0">
                 <Button
                   variant="outline"
                   onClick={() => setEditing(p)}

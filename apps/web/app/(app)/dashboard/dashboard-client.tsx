@@ -21,6 +21,7 @@ import { buildListSearch, type ListParams } from '@/lib/list-state';
 import { exportCsv, exportXls, type ExportColumn } from '@/lib/export';
 import { cn } from '@/lib/utils';
 import { useCrawls, type CrawlsListResponse } from '@/lib/queries/crawls';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { SearchView } from '@/lib/types';
 
 type SortKey = 'name' | 'lastRun' | 'results' | 'status';
@@ -48,7 +49,11 @@ export function DashboardClient({
   listParams: ListParams;
 }) {
   const router = useRouter();
-  const { page, pageSize, view } = listParams;
+  const isMobile = useIsMobile();
+  const { page, pageSize, view: requestedView } = listParams;
+  // Mobile cramps a 6-column table; force the grid view there regardless
+  // of the URL preference. Desktop respects the user's toggle.
+  const view = isMobile ? 'grid' : requestedView;
   // SSR fetched the data already — seed the query cache so subsequent
   // mutations (start crawl, delete crawl) can invalidate this key and
   // trigger a fresh fetch without a full page reload.
@@ -172,7 +177,9 @@ export function DashboardClient({
         <span className="font-mono text-[11px] text-fg-subtle">
           {total} {isFiltered ? 'MATCHING' : 'TOTAL'} · PAGE {page} · {pageSize}/PAGE
         </span>
-        <ViewToggle value={view} onChange={setView} />
+        <div className="hidden md:block">
+          <ViewToggle value={view} onChange={setView} />
+        </div>
       </div>
 
       {view === 'list' ? (

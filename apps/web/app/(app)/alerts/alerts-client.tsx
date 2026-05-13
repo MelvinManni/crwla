@@ -38,6 +38,7 @@ import {
   useUpdateAlert,
   type AlertsListResponse,
 } from '@/lib/queries/alerts';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { AlertView } from './page';
 
 type Frequency = 'REALTIME' | 'HOURLY' | 'DAILY';
@@ -53,6 +54,9 @@ export function AlertsClient({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+  // Mobile cramps the 5-column alerts table; force the grid view there.
+  const effectiveView = isMobile ? 'grid' : listParams.view;
 
   // Seed the list query from SSR so mutations can invalidate cleanly.
   const initialData: AlertsListResponse = {
@@ -168,7 +172,9 @@ export function AlertsClient({
         <span className="font-mono text-[11px] text-fg-subtle">
           {total} TOTAL · PAGE {listParams.page} · {listParams.pageSize}/PAGE
         </span>
-        <ViewToggle value={listParams.view} onChange={setView} />
+        <div className="hidden md:block">
+          <ViewToggle value={listParams.view} onChange={setView} />
+        </div>
       </div>
 
       {alerts.length === 0 ? (
@@ -179,7 +185,7 @@ export function AlertsClient({
             Create one above to get notified when matching results land.
           </p>
         </div>
-      ) : listParams.view === 'list' ? (
+      ) : effectiveView === 'list' ? (
         <div className="overflow-hidden rounded-[10px] border border-border bg-bg-elev">
           <Table>
             <TableHeader>
