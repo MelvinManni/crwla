@@ -170,8 +170,7 @@ export function ProfileClient({ initialUser }: { initialUser: SessionUser }) {
       <Card className="mt-6 rounded-[10px] border-destructive/30 bg-destructive/5 p-5">
         <h2 className="text-[15px] font-semibold text-destructive">Danger zone</h2>
         <p className="mt-0.5 text-[12px] text-fg-muted">
-          Soft-deletes your account. Your data is retained but you'll no longer be able to
-          sign in. Contact an admin to restore.
+          Deleting your account is irreversible. If you just want to sign out, you can do that from the sidebar.
         </p>
 
         <div className="mt-4">
