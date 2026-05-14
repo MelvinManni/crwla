@@ -81,7 +81,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
   }
 
   return (
-    <Sidebar id="sidebar-nav" collapsible="icon" className="border-r border-border">
+    <Sidebar data-tour="nav" collapsible="icon" className="border-r border-border">
       <SidebarHeader className="px-3 pt-4 pb-3">
         <div className="flex items-center gap-2.5 px-1">
           <div

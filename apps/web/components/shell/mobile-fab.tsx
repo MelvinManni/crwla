@@ -10,6 +10,7 @@ export function MobileFab() {
     <button
       type="button"
       onClick={open}
+      data-tour="new-crawl"
       aria-label="Start a crawl"
       className="fixed bottom-5 right-5 z-40 grid h-14 w-14 place-items-center rounded-full bg-fg text-bg-elev shadow-lg ring-1 ring-border transition-transform duration-150 hover:-translate-y-px active:translate-y-0 md:hidden"
     >

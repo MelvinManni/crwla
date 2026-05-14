@@ -2,9 +2,31 @@ import type { DriveStep } from 'driver.js';
 import type { OnboardingFlow } from '@/lib/queries/onboarding';
 
 /**
- * Per-flow step config consumed by `driver.js`. Element selectors are
- * stable IDs added to the target components — see the plan for the
- * mapping. Centered steps (no `element`) are used for intro/outro copy.
+ * Find the first element matching `selector` that's actually rendered
+ * (non-zero bounding box). Lets a single step target multiple candidate
+ * elements — e.g. desktop `<Sidebar>` vs. the mobile `<SidebarTrigger>`
+ * hamburger — and pick whichever the current viewport is showing.
+ *
+ * Returns `undefined` if nothing matches, which makes driver.js fall back
+ * to a centered popover for that step.
+ */
+function resolveVisible(selector: string): Element | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const nodes = document.querySelectorAll(selector);
+  for (const node of Array.from(nodes)) {
+    const el = node as HTMLElement;
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) return el;
+  }
+  return undefined;
+}
+
+/**
+ * Per-flow step config consumed by `driver.js`. `element` is supplied as
+ * a resolver function rather than a CSS string so we can pick whichever
+ * candidate is currently in the layout — important on mobile where the
+ * sidebar collapses to a hamburger and the "Start a crawl" CTA becomes a
+ * floating action button.
  */
 export const ONBOARDING_STEPS: Record<OnboardingFlow, DriveStep[]> = {
   FIRST_LOGIN: [
@@ -16,23 +38,19 @@ export const ONBOARDING_STEPS: Record<OnboardingFlow, DriveStep[]> = {
       },
     },
     {
-      element: '#sidebar-nav',
+      element: () => resolveVisible('[data-tour="nav"]') as Element,
       popover: {
         title: 'Navigation',
         description:
-          'Crawls, alerts, billing, and your profile all live in the sidebar.',
-        side: 'right',
-        align: 'start',
+          'Crawls, alerts, billing, and your profile all live in the sidebar. On smaller screens the hamburger opens it.',
       },
     },
     {
-      element: '#new-crawl-btn',
+      element: () => resolveVisible('[data-tour="new-crawl"]') as Element,
       popover: {
         title: 'Start a crawl',
         description:
-          "Click here whenever you want to track new keywords. We'll handle the fetching, dedup, and ranking.",
-        side: 'bottom',
-        align: 'end',
+          "Tap here whenever you want to track new keywords. We'll handle the fetching, dedup, and ranking.",
       },
     },
     {
@@ -45,53 +63,43 @@ export const ONBOARDING_STEPS: Record<OnboardingFlow, DriveStep[]> = {
   ],
   FIRST_CRAWL: [
     {
-      element: '#crawl-header',
+      element: () => resolveVisible('#crawl-header') as Element,
       popover: {
         title: 'Your first crawl',
         description:
           'This is the crawl detail page. Each crawl gets its own results stream.',
-        side: 'bottom',
-        align: 'start',
       },
     },
     {
-      element: '#crawl-keywords',
+      element: () => resolveVisible('#crawl-keywords') as Element,
       popover: {
         title: 'Keywords',
         description:
           'These are the terms we crawl for on this run. Edit them anytime from settings.',
-        side: 'bottom',
-        align: 'start',
       },
     },
     {
-      element: '#run-now-btn',
+      element: () => resolveVisible('#run-now-btn') as Element,
       popover: {
         title: 'Run on demand',
         description:
           'Crawls run on a schedule, but you can kick one off manually any time.',
-        side: 'bottom',
-        align: 'end',
       },
     },
     {
-      element: '#filter-prompt',
+      element: () => resolveVisible('#filter-prompt') as Element,
       popover: {
         title: 'Natural-language filter',
         description:
           'Type something like "only YC-funded startups" — we\'ll narrow the visible results without dropping data.',
-        side: 'top',
-        align: 'start',
       },
     },
     {
-      element: '#results-pane',
+      element: () => resolveVisible('#results-pane') as Element,
       popover: {
         title: 'Results land here',
         description:
           'Once a run completes, articles + posts show up below with thumbnails, summaries, and timestamps.',
-        side: 'top',
-        align: 'center',
       },
     },
   ],

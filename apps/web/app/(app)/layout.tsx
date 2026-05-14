@@ -33,7 +33,7 @@ export default async function AppLayout({
               <AppSidebar user={user} />
               <SidebarInset>
                 <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
-                  <SidebarTrigger className="-ml-1" />
+                  <SidebarTrigger data-tour="nav" className="-ml-1" />
                   <Separator orientation="vertical" className="mr-2 h-4" />
                   <span className="text-sm text-muted-foreground">CRWLA</span>
                 </header>
