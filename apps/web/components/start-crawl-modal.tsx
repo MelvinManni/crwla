@@ -196,29 +196,32 @@ function StartCrawlDialog({
             />
           </div>
 
-            <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2.5">
-              <div className="flex items-center gap-1.5">
-                <Label htmlFor="crawl-strict" className="cursor-pointer">
-                  Strict mode
-                </Label>
-                <Tooltip>
-                  <TooltipTrigger
-                    type="button"
-                    aria-label="What is strict mode?"
-                    className="text-muted-foreground hover:text-foreground"
-                    render={<button/>}
-                  >
-                    <Info size={14} aria-hidden />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-[240px] text-left leading-snug">
-                    Only keeps results that contain <strong>all</strong> of your keywords
-                    in the title or snippet. When off, a result matching any single
-                    keyword is kept.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <Switch id="crawl-strict" checked={strict} onCheckedChange={setStrict} />
+          <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2.5">
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="crawl-strict" className="cursor-pointer">
+                Strict mode
+              </Label>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      aria-label="What is strict mode?"
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Info size={14} aria-hidden />
+                    </button>
+                  }
+                />
+                <TooltipContent className="max-w-[240px] text-left leading-snug">
+                  Only keeps results that contain <strong>all</strong> of your keywords
+                  in the title or snippet. When off, a result matching any single
+                  keyword is kept.
+                </TooltipContent>
+              </Tooltip>
             </div>
+            <Switch id="crawl-strict" checked={strict} onCheckedChange={setStrict} />
+          </div>
 
           {/* {allowed.length > 0 && (
             <p className="font-mono text-[11px] text-fg-subtle">

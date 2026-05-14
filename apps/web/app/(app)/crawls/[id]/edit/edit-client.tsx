@@ -155,27 +155,31 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
           <Textarea id="filter" value={filterPrompt} onChange={(e) => setFilterPrompt(e.target.value)} />
         </div>
 
-          <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2.5">
-            <div className="flex items-center gap-1.5">
-              <Label htmlFor="strict" className="cursor-pointer">
-                Strict mode
-              </Label>
-              <Tooltip>
-                <TooltipTrigger
-                  type="button"
-                  aria-label="What is strict mode?"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <Info size={14} aria-hidden />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[260px] text-left leading-snug">
-                  Only keeps results that contain <strong>all</strong> of your keywords
-                  in the title or snippet. Applied on the next run.
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <Switch id="strict" checked={strict} onCheckedChange={setStrict} />
+        <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2.5">
+          <div className="flex items-center gap-1.5">
+            <Label htmlFor="strict" className="cursor-pointer">
+              Strict mode
+            </Label>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    aria-label="What is strict mode?"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Info size={14} aria-hidden />
+                  </button>
+                }
+              />
+              <TooltipContent className="max-w-[260px] text-left leading-snug">
+                Only keeps results that contain <strong>all</strong> of your keywords
+                in the title or snippet. Applied on the next run.
+              </TooltipContent>
+            </Tooltip>
           </div>
+          <Switch id="strict" checked={strict} onCheckedChange={setStrict} />
+        </div>
 
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={paused} onChange={(e) => setPaused(e.target.checked)} />
