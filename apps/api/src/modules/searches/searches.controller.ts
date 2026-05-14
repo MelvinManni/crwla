@@ -47,7 +47,7 @@ export class SearchesController {
 
   @Post()
   async create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateSearchDto) {
-    const job = await this.searches.create(user.id, dto);
+    const job = await this.searches.create(user.id, user.role, dto);
     return { job };
   }
 

@@ -200,7 +200,10 @@ export function ResultsClient({
   return (
     <div className="mx-auto flex min-h-[calc(100svh-3.5rem)] flex-col">
       {/* Header */}
-      <div className="flex flex-col gap-3 border-b border-border bg-bg px-4 py-4 md:flex-row md:items-start md:justify-between md:gap-2 md:px-6">
+      <div
+        id="crawl-header"
+        className="flex flex-col gap-3 border-b border-border bg-bg px-4 py-4 md:flex-row md:items-start md:justify-between md:gap-2 md:px-6"
+      >
         <div className="flex min-w-0 items-start gap-3">
           <Button
             variant="ghost"
@@ -242,6 +245,7 @@ export function ResultsClient({
             Edit
           </Button>
           <Button
+            id="run-now-btn"
             onClick={runNow}
             disabled={busy !== null}
             loading={busy === 'run'}
@@ -254,7 +258,10 @@ export function ResultsClient({
       </div>
 
       {/* Keyword tag strip */}
-      <div className="flex flex-wrap gap-1.5 border-b border-border bg-bg px-4 py-3 md:px-6">
+      <div
+        id="crawl-keywords"
+        className="flex flex-wrap gap-1.5 border-b border-border bg-bg px-4 py-3 md:px-6"
+      >
         {initial.job.keywords.map((k) => (
           <KeywordChip key={k}>{k}</KeywordChip>
         ))}
@@ -262,7 +269,7 @@ export function ResultsClient({
 
       {/* Filter prompt block */}
       <div className="px-4 pt-4 md:px-6">
-        <div className="rounded-[10px] border border-border bg-bg-elev p-3.5">
+        <div id="filter-prompt" className="rounded-[10px] border border-border bg-bg-elev p-3.5">
           <div className="mb-2.5 flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 text-fg-muted" />
             <span className="text-[12px] font-medium">Filter prompt</span>
@@ -308,7 +315,7 @@ export function ResultsClient({
       </div>
 
       {/* Results panel */}
-      <div className="flex-1 px-4 py-4 md:px-6">
+      <div id="results-pane" className="flex-1 px-4 py-4 md:px-6">
         <ResultsPanel
           searchId={initial.job.id}
           results={results}

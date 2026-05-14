@@ -18,6 +18,7 @@ export function StartCrawlButton({
   const { open } = useStartCrawl();
   return (
     <Button
+      id="new-crawl-btn"
       className={cn('rounded-lg', hideOnMobile && 'hidden md:inline-flex', className)}
       onClick={open}
     >

@@ -14,4 +14,5 @@ export const qk = {
   },
   billing: { me: () => ['billing', 'me'] as const, plans: () => ['billing', 'plans'] as const },
   auth: { me: () => ['auth', 'me'] as const },
+  onboarding: { active: () => ['onboarding', 'active'] as const },
 } as const;

@@ -1,10 +1,11 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { CronPreset, Prisma, RunStatus, Search, SearchStatus } from '@prisma/client';
+import { CronPreset, Prisma, Role, RunStatus, Search, SearchStatus } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { ScrapeQueue } from '../../queues/scrape/scrape.queue';
 import { SourceRegistry } from '../scraper/sources/source.registry';
 import { DEFAULT_SOURCES } from '../scraper/sources/source.types';
 import { EntitlementsService } from '../billing/entitlements.service';
+import { OnboardingService } from '../onboarding/onboarding.service';
 import { CreateSearchDto } from './dto/create-search.dto';
 import { UpdateSearchDto } from './dto/update-search.dto';
 
@@ -93,6 +94,7 @@ export class SearchesService {
     private readonly scrapeQueue: ScrapeQueue,
     private readonly registry: SourceRegistry,
     private readonly entitlements: EntitlementsService,
+    private readonly onboarding: OnboardingService,
   ) {}
 
   async listForUser(
@@ -155,7 +157,7 @@ export class SearchesService {
     return shape(await this.getOwned(userId, id));
   }
 
-  async create(userId: string, dto: CreateSearchDto) {
+  async create(userId: string, role: Role, dto: CreateSearchDto) {
     // Plan-limit gates fire first.
     await this.entitlements.assertCanCreateSearch(userId);
     await this.entitlements.assertCanAddKeywords(userId, dto.keywords.length);
@@ -183,6 +185,9 @@ export class SearchesService {
       },
     });
     await this.scrapeQueue.scheduleRepeatable(created.id, created.cron);
+    // Trigger the post-create walkthrough on the first crawl. Idempotent
+    // and admin-skipping; safe to call after every create.
+    await this.onboarding.ensureFirstCrawl(userId, role);
     return shape({ ...created, _count: { results: 0 } });
   }
 

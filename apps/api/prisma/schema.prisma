@@ -19,6 +19,17 @@ enum Role {
   MEMBER
 }
 
+enum OnboardingFlow {
+  FIRST_LOGIN
+  FIRST_CRAWL
+}
+
+enum OnboardingStatus {
+  PENDING
+  COMPLETED
+  DISMISSED
+}
+
 enum AccessRequestStatus {
   PENDING
   APPROVED
@@ -112,8 +123,26 @@ model User {
   alerts           Alert[]
   subscription     Subscription?
   scheduledChanges ScheduledPlanChange[]
+  onboardingStates OnboardingState[]
 
   @@map("user")
+}
+
+/// Per-user onboarding tracker. One row per (user, flow). Admins are
+/// skipped at the API layer so no rows accumulate for internal accounts.
+model OnboardingState {
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flow        OnboardingFlow
+  status      OnboardingStatus @default(PENDING)
+  startedAt   DateTime         @default(now()) @map("started_at")
+  completedAt DateTime?        @map("completed_at")
+  dismissedAt DateTime?        @map("dismissed_at")
+
+  @@unique([userId, flow])
+  @@index([userId, status])
+  @@map("onboarding_state")
 }
 
 enum ContactPurpose {

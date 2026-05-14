@@ -52,6 +52,10 @@ export function useCreateCrawl() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['searches'] });
       qc.invalidateQueries({ queryKey: ['searches', 'next-name'] });
+      // The server upserts the FIRST_CRAWL onboarding row when a non-admin
+      // creates their first crawl. Refetch so the walkthrough picks it up
+      // on the next route render (typically /crawls/[id]).
+      qc.invalidateQueries({ queryKey: qk.onboarding.active() });
     },
   });
 }

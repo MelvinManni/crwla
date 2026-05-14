@@ -12,6 +12,7 @@ import { ToasterProvider } from "@/components/ui/toaster";
 import { UpgradeModalProvider } from "@/components/billing/upgrade-modal";
 import { EntitlementsProvider } from "@/components/billing/entitlements-provider";
 import { StartCrawlProvider } from "@/components/start-crawl-modal";
+import { Walkthrough } from "@/components/onboarding/walkthrough";
 
 export default async function AppLayout({
   children,
@@ -38,6 +39,7 @@ export default async function AppLayout({
                 </header>
                 <div className="flex-1">{children}</div>
               </SidebarInset>
+              <Walkthrough />
             </SidebarProvider>
           </StartCrawlProvider>
         </EntitlementsProvider>
