@@ -208,6 +208,7 @@ function StartCrawlDialog({
                     type="button"
                     aria-label="What is strict mode?"
                     className="text-muted-foreground hover:text-foreground"
+                    render={<button/>}
                   >
                     <Info size={14} aria-hidden />
                   </TooltipTrigger>
