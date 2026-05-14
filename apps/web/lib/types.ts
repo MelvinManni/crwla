@@ -42,6 +42,7 @@ export type ResultView = {
   tag: string | null;
   time: string | null;
   publishedAt: number | null;
+  favorite: boolean;
 };
 
 export type RunView = {

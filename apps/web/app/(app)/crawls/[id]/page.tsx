@@ -35,6 +35,9 @@ export default async function ResultsPage({
   const { id } = await params;
   const sp = await searchParams;
   const list = parseListParams(sp, { pageSize: 20, view: 'list' });
+  // Favorite-tab selection lives in the URL alongside list params so deep
+  // links + back/forward navigation keep the active tab.
+  const favorite = sp.favorite === '1' || sp.favorite === 'true';
 
   const jar = await cookies();
   const cookie = jar.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
@@ -45,6 +48,7 @@ export default async function ResultsPage({
   if (list.q) qs.set('q', list.q);
   if (list.keyword) qs.set('keyword', list.keyword);
   if (list.time !== 'all') qs.set('time', list.time);
+  if (favorite) qs.set('favorite', '1');
 
   let data: ApiOut;
   try {
@@ -55,5 +59,5 @@ export default async function ResultsPage({
     notFound();
   }
 
-  return <ResultsClient initial={data} listParams={list} />;
+  return <ResultsClient initial={data} listParams={list} favorite={favorite} />;
 }

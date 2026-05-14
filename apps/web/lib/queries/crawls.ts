@@ -128,6 +128,28 @@ export function useApplyCrawlFilter() {
   });
 }
 
+/**
+ * Toggle a single result's favorite flag. Returns the new state from the
+ * server so callers can reconcile optimistic updates without re-fetching.
+ */
+export function useToggleResultFavorite() {
+  return useMutation({
+    mutationFn: ({
+      searchId,
+      resultId,
+      favorite,
+    }: {
+      searchId: string;
+      resultId: string;
+      favorite: boolean;
+    }) =>
+      api.patch<{ id: string; favorite: boolean }>(
+        `/searches/${searchId}/results/${resultId}/favorite`,
+        { favorite },
+      ),
+  });
+}
+
 export type CrawlResultsResponse = {
   job: {
     id: string;

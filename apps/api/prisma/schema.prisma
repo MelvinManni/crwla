@@ -254,6 +254,9 @@ model Result {
   publishedAt DateTime? @map("published_at")
   fetchedAt   DateTime  @default(now()) @map("fetched_at")
   hidden      Boolean   @default(false)
+  /// Per-row favorite marker. Timestamp (not boolean) so a future
+  /// "recent favorites" tab can sort by it. NULL == not favorited.
+  favoritedAt DateTime? @map("favorited_at")
   metadata    Json?
 
   /// `search_vector tsvector GENERATED ALWAYS AS (...) STORED` is added by
@@ -272,6 +275,7 @@ model Result {
   // Hashes normalize whitespace + case so trivial reposts collide.
   @@unique([searchId, titleHash, snippetHash])
   @@index([searchId, fetchedAt(sort: Desc)])
+  @@index([searchId, favoritedAt(sort: Desc)])
   @@index([source])
   @@index([location])
   @@index([searchVector], map: "idx_result_search_vector", type: Gin)

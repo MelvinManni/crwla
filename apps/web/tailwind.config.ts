@@ -188,6 +188,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],
         mono: ['var(--font-mono)', 'monospace'],
         // marketing fonts (Google) — loaded via next/font in (marketing)/layout
         space: ['var(--font-space-grotesk)', 'system-ui', 'sans-serif'],

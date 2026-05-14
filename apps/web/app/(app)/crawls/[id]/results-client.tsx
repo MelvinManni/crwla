@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ExternalLink,
+  Heart,
   Pencil,
   Play,
   RefreshCw,
@@ -25,6 +26,7 @@ import {
   crawlResultsQuery,
   useApplyCrawlFilter,
   useRunCrawl,
+  useToggleResultFavorite,
 } from '@/lib/queries/crawls';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
@@ -98,14 +100,18 @@ const EXPORT_COLUMNS: ExportColumn<ResultView>[] = [
 export function ResultsClient({
   initial,
   listParams,
+  favorite,
 }: {
   initial: Initial;
   listParams: ListParams;
+  favorite: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const qc = useQueryClient();
   const runMut = useRunCrawl();
   const filterMut = useApplyCrawlFilter();
+  const favoriteMut = useToggleResultFavorite();
   const [results, setResults] = useState(initial.results);
   // Header count must reflect the total stored results for this crawl, not
   // the loaded-page count or the active filter subset. We track it so a
@@ -116,6 +122,48 @@ export function ResultsClient({
   const [filterMode, setFilterMode] = useState<string | null>(null);
   // Reload spinner — separate from mutations.
   const [reloading, setReloading] = useState(false);
+
+  /**
+   * Optimistic favorite toggle. Updates local state immediately, fires the
+   * mutation, and rolls back if the server rejects it. The favorites tab
+   * filter (`?favorite=1`) is enforced server-side, so toggling on the
+   * "All" tab keeps the row in place; toggling on "Favorites" makes the
+   * row disappear after the next refetch — that's expected.
+   */
+  function toggleFavorite(resultId: string) {
+    const before = results.find((r) => r.id === resultId)?.favorite ?? false;
+    const next = !before;
+    setResults((arr) =>
+      arr.map((r) => (r.id === resultId ? { ...r, favorite: next } : r)),
+    );
+    favoriteMut.mutate(
+      { searchId: initial.job.id, resultId, favorite: next },
+      {
+        onError: (e) => {
+          setResults((arr) =>
+            arr.map((r) => (r.id === resultId ? { ...r, favorite: before } : r)),
+          );
+          toast.error('Could not update favorite', {
+            description: (e as Error).message,
+          });
+        },
+      },
+    );
+  }
+
+  function setTab(nextFavorite: boolean) {
+    if (nextFavorite === favorite) return;
+    const sp = new URLSearchParams();
+    if (listParams.q) sp.set('q', listParams.q);
+    if (listParams.keyword) sp.set('keyword', listParams.keyword);
+    if (listParams.time !== 'all') sp.set('time', listParams.time);
+    if (listParams.view !== 'list') sp.set('view', listParams.view);
+    if (listParams.pageSize !== 20)
+      sp.set('pageSize', String(listParams.pageSize));
+    if (nextFavorite) sp.set('favorite', '1');
+    const qs = sp.toString();
+    router.push((qs ? `${pathname}?${qs}` : pathname) as never);
+  }
 
   // SSR re-runs whenever a URL param changes (page, pageSize, filters), but
   // because `results`/`totalResults` are useState-seeded from `initial`,
@@ -322,6 +370,9 @@ export function ResultsClient({
           total={initial.total}
           searchKeywords={initial.job.keywords}
           listParams={listParams}
+          favorite={favorite}
+          onSetTab={setTab}
+          onToggleFavorite={toggleFavorite}
         />
       </div>
     </div>
@@ -334,12 +385,18 @@ function ResultsPanel({
   total,
   searchKeywords,
   listParams,
+  favorite,
+  onSetTab,
+  onToggleFavorite,
 }: {
   searchId: string;
   results: ResultView[];
   total: number;
   searchKeywords: string[];
   listParams: ListParams;
+  favorite: boolean;
+  onSetTab: (nextFavorite: boolean) => void;
+  onToggleFavorite: (resultId: string) => void;
 }) {
   const router = useRouter();
   const base = `/crawls/${searchId}`;
@@ -447,12 +504,55 @@ function ResultsPanel({
   return (
     <div className="overflow-hidden rounded-[10px] border border-border bg-bg-elev">
       <div className="sticky top-0 z-20 bg-bg-elev">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div className="flex items-center gap-3">
             <span className="text-[13px] font-medium">Results</span>
             <span className="font-mono text-[11px] text-fg-muted">
               {isFiltered ? `${total} matching` : `${total} items`}
             </span>
+          </div>
+          {/* All / Favorites pill tabs. Active pill takes the brand
+              accent so the user can tell what they're filtering on
+              without reading copy. */}
+          <div
+            role="tablist"
+            aria-label="Result filter"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-bg-elev p-0.5"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!favorite}
+              onClick={() => onSetTab(false)}
+              className={cn(
+                'rounded-full px-3 py-1 text-[12px] font-medium transition-colors',
+                !favorite
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-fg-muted hover:text-fg',
+              )}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={favorite}
+              onClick={() => onSetTab(true)}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-medium transition-colors',
+                favorite
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-fg-muted hover:text-fg',
+              )}
+            >
+              <Heart
+                className={cn(
+                  'h-3.5 w-3.5',
+                  favorite ? 'fill-current' : 'fill-transparent',
+                )}
+              />
+              Favorites
+            </button>
           </div>
           <ViewToggle value={listParams.view} onChange={onView} />
         </div>
@@ -488,54 +588,68 @@ function ResultsPanel({
       ) : listParams.view === 'list' ? (
         <ul className="divide-y divide-border">
           {sorted.map((r) => (
-            <li key={r.id}>
+            <li
+              key={r.id}
+              className="group relative flex items-start gap-3.5 px-4 py-4 transition-colors hover:bg-bg-elev"
+            >
+              {/* Stretched-link target so the row is clickable but the
+                  heart button (a real button, can't nest inside <a>) sits
+                  as a sibling on top. */}
               <a
                 href={r.url}
                 target="_blank"
                 rel="noreferrer"
-                className="group flex items-start gap-3.5 px-4 py-4 transition-colors hover:bg-bg-elev"
-              >
-                <ResultThumb r={r} />
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.06em] text-fg-muted">
-                    <span className="truncate">{r.source}</span>
-                    {r.tag && (
-                      <span className="rounded-sm border border-border bg-bg-elev px-1 py-px text-fg">
-                        {r.tag}
-                      </span>
-                    )}
-                  </div>
-                  <div className="line-clamp-2 text-[14px] font-medium leading-snug tracking-[-0.005em] group-hover:text-fg">
-                    {r.title}
-                  </div>
-                  {r.snippet && (
-                    <div className="line-clamp-2 text-[12px] leading-relaxed text-fg-muted">
-                      {r.snippet}
-                    </div>
-                  )}
-                  {r.time && (
-                    <div className="mt-0.5 font-mono text-[10px] text-fg-subtle">
-                      {r.time}
-                    </div>
+                aria-label={r.title}
+                className="absolute inset-0 z-0"
+              />
+              <ResultThumb r={r} />
+              <div className="relative z-10 pointer-events-none flex min-w-0 flex-1 flex-col gap-1">
+                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.06em] text-fg-muted">
+                  <span className="truncate">{r.source}</span>
+                  {r.tag && (
+                    <span className="rounded-sm border border-border bg-bg-elev px-1 py-px text-fg">
+                      {r.tag}
+                    </span>
                   )}
                 </div>
-                <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-fg-subtle transition-colors group-hover:text-fg" />
-              </a>
+                <div className="line-clamp-2 text-[14px] font-medium leading-snug tracking-[-0.005em] group-hover:text-fg">
+                  {r.title}
+                </div>
+                {r.snippet && (
+                  <div className="line-clamp-2 text-[12px] leading-relaxed text-fg-muted">
+                    {r.snippet}
+                  </div>
+                )}
+                {r.time && (
+                  <div className="mt-0.5 font-mono text-[10px] text-fg-subtle">
+                    {r.time}
+                  </div>
+                )}
+              </div>
+              <FavoriteToggle
+                active={r.favorite}
+                onToggle={() => onToggleFavorite(r.id)}
+              />
+              <ExternalLink className="relative z-10 pointer-events-none mt-1 h-4 w-4 shrink-0 text-fg-subtle transition-colors group-hover:text-fg" />
             </li>
           ))}
         </ul>
       ) : (
         <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-4">
           {sorted.map((r) => (
-            <a
+            <div
               key={r.id}
-              href={r.url}
-              target="_blank"
-              rel="noreferrer"
-              className="group flex flex-col overflow-hidden rounded-[10px] border border-border bg-bg-elev transition-colors hover:border-border-strong"
+              className="group relative flex flex-col overflow-hidden rounded-[10px] border border-border bg-bg-elev transition-colors hover:border-border-strong"
             >
+              <a
+                href={r.url}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={r.title}
+                className="absolute inset-0 z-0"
+              />
               <ResultThumbWide r={r} />
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
+              <div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-col gap-1.5 p-3">
                 <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.06em] text-fg-muted">
                   <span className="truncate">{r.source}</span>
                   {r.tag && (
@@ -559,7 +673,13 @@ function ResultsPanel({
                   </div>
                 )}
               </div>
-            </a>
+              <div className="absolute right-2 top-2 z-20">
+                <FavoriteToggle
+                  active={r.favorite}
+                  onToggle={() => onToggleFavorite(r.id)}
+                />
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -571,6 +691,45 @@ function ResultsPanel({
         onChange={onPage}
       />
     </div>
+  );
+}
+
+/**
+ * Heart button shared by the list rows and grid cards. Sits above the
+ * stretched-link click target via z-index and stops propagation so a
+ * click doesn't navigate into the article URL.
+ */
+function FavoriteToggle({
+  active,
+  onToggle,
+}: {
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
+      aria-pressed={active}
+      aria-label={active ? 'Remove from favorites' : 'Add to favorites'}
+      className={cn(
+        'relative z-20 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent transition-colors',
+        active
+          ? 'text-accent'
+          : 'text-fg-subtle hover:bg-bg-sunk hover:text-accent',
+      )}
+    >
+      <Heart
+        className={cn(
+          'h-4 w-4 transition-colors',
+          active ? 'fill-accent' : 'fill-transparent',
+        )}
+      />
+    </button>
   );
 }
 

@@ -53,6 +53,7 @@ export class ResultsService {
       q?: string;
       keyword?: string;
       time?: string;
+      favorite?: boolean;
     } = {},
   ) {
     const search = await this.ownedSearch(userId, searchId);
@@ -86,6 +87,9 @@ export class ResultsService {
       values.push(cutoff);
       i++;
     }
+    if (opts.favorite) {
+      conditions.push('favorited_at IS NOT NULL');
+    }
     const whereSql = conditions.join(' AND ');
 
     const totalRow: Array<{ count: bigint }> = await this.prisma.$queryRawUnsafe(
@@ -106,8 +110,9 @@ export class ResultsService {
       tag: string | null;
       published_at: Date | null;
       fetched_at: Date;
+      favorited_at: Date | null;
     }> = await this.prisma.$queryRawUnsafe(
-      `SELECT id, source, title, url, snippet, image_url, tag, published_at, fetched_at
+      `SELECT id, source, title, url, snippet, image_url, tag, published_at, fetched_at, favorited_at
        FROM result
        WHERE ${whereSql}
        ORDER BY COALESCE(published_at, fetched_at) DESC
@@ -127,6 +132,7 @@ export class ResultsService {
       tag: r.tag,
       time: relTime(r.published_at ?? r.fetched_at),
       publishedAt: r.published_at ? r.published_at.getTime() : null,
+      favorite: r.favorited_at !== null,
     }));
 
     return {
@@ -148,6 +154,31 @@ export class ResultsService {
       pageSize,
       hasMore: page * pageSize < total,
     };
+  }
+
+  /**
+   * Toggle the per-row favorite marker. Ownership is enforced by the
+   * `ownedSearch` lookup before we touch the result. Returns the new
+   * favorite state so the client can stay optimistic without re-fetching.
+   */
+  async setFavorite(
+    userId: string,
+    searchId: string,
+    resultId: string,
+    favorite: boolean,
+  ): Promise<{ id: string; favorite: boolean }> {
+    await this.ownedSearch(userId, searchId);
+    const row = await this.prisma.result.update({
+      where: { id: resultId },
+      data: { favoritedAt: favorite ? new Date() : null },
+      select: { id: true, favoritedAt: true, searchId: true },
+    });
+    // ownedSearch already proved the search belongs to the user, but the
+    // result id is user-supplied — defend against cross-search writes.
+    if (row.searchId !== searchId) {
+      throw new NotFoundException('not found');
+    }
+    return { id: row.id, favorite: row.favoritedAt !== null };
   }
 
   async filterPrompt(userId: string, searchId: string, prompt: string) {

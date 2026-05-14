@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { IsString } from 'class-validator';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { IsBoolean, IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   AuthenticatedUser,
@@ -10,6 +10,11 @@ import { ResultsService } from './results.service';
 class FilterPromptDto {
   @IsString()
   prompt!: string;
+}
+
+class FavoriteDto {
+  @IsBoolean()
+  favorite!: boolean;
 }
 
 @UseGuards(JwtAuthGuard)
@@ -26,6 +31,7 @@ export class ResultsController {
     @Query('q') q?: string,
     @Query('keyword') keyword?: string,
     @Query('time') time?: string,
+    @Query('favorite') favorite?: string,
   ) {
     const page = pageRaw ? Number(pageRaw) : undefined;
     const pageSize = pageSizeRaw ? Number(pageSizeRaw) : undefined;
@@ -35,6 +41,7 @@ export class ResultsController {
       q,
       keyword,
       time,
+      favorite: favorite === '1' || favorite === 'true',
     });
   }
 
@@ -45,5 +52,15 @@ export class ResultsController {
     @Body() dto: FilterPromptDto,
   ) {
     return this.results.filterPrompt(user.id, id, dto.prompt ?? '');
+  }
+
+  @Patch('results/:resultId/favorite')
+  setFavorite(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('resultId') resultId: string,
+    @Body() dto: FavoriteDto,
+  ) {
+    return this.results.setFavorite(user.id, id, resultId, dto.favorite);
   }
 }

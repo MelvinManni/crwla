@@ -7,6 +7,15 @@ const FETCH_TIMEOUT_MS = 6000;
 const MAX_HTML_BYTES = 512 * 1024; // don't pull whole sites — head is enough
 
 /**
+ * Hosts that aggregate/wrap article links — fetching them returns a stub
+ * page whose og:image/title/favicon belongs to the aggregator, not the
+ * article. When we detect one we look for the destination in the stub
+ * HTML (canonical/refresh/og:url/etc.) and refetch from there.
+ */
+const WRAPPER_HOSTS =
+  /(^|\.)news\.google\.com$|(^|\.)googleusercontent\.com$/i;
+
+/**
  * Best-effort article-thumbnail extractor.
  *
  * For a given page URL we try, in priority order:
@@ -28,39 +37,61 @@ export class ThumbnailService {
 
   async forUrl(targetUrl: string): Promise<string | null> {
     try {
-      const html = await this.fetchHead(targetUrl);
+      let pageUrl = targetUrl;
+      let html = await this.fetchHead(pageUrl);
       if (!html) return null;
+
+      // Google News URLs return a JS-redirect stub whose og:image/favicon
+      // belong to Google. If we recognise the wrapper host, look for the
+      // real destination in the stub and refetch — otherwise every Google
+      // News result ends up with the same generic Google thumbnail.
+      if (this.isWrapperHost(pageUrl)) {
+        const next = this.unwrapDestination(cheerio.load(html), pageUrl);
+        if (next && next !== pageUrl) {
+          const refetched = await this.fetchHead(next);
+          if (refetched) {
+            pageUrl = next;
+            html = refetched;
+          }
+        }
+      }
+
       const $ = cheerio.load(html);
+      // After unwrapping, all relative URLs resolve against the article's
+      // real origin — same variable name used below preserves the chain.
+      const targetUrlResolved = pageUrl;
 
       const og =
         $('meta[property="og:image:secure_url"]').attr('content') ||
         $('meta[property="og:image:url"]').attr('content') ||
         $('meta[property="og:image"]').attr('content') ||
         $('meta[name="og:image"]').attr('content');
-      if (og) return this.absolutize(og, targetUrl);
+      if (og) return this.absolutize(og, targetUrlResolved);
 
       const tw =
         $('meta[name="twitter:image"]').attr('content') ||
         $('meta[name="twitter:image:src"]').attr('content') ||
         $('meta[property="twitter:image"]').attr('content');
-      if (tw) return this.absolutize(tw, targetUrl);
+      if (tw) return this.absolutize(tw, targetUrlResolved);
 
       const linkImg = $('link[rel="image_src"]').attr('href');
-      if (linkImg) return this.absolutize(linkImg, targetUrl);
+      if (linkImg) return this.absolutize(linkImg, targetUrlResolved);
 
       const jsonLd = this.fromJsonLd($);
-      if (jsonLd) return this.absolutize(jsonLd, targetUrl);
+      if (jsonLd) return this.absolutize(jsonLd, targetUrlResolved);
 
       const articleImg = this.fromArticleBody($);
-      if (articleImg) return this.absolutize(articleImg, targetUrl);
+      if (articleImg) return this.absolutize(articleImg, targetUrlResolved);
 
       const fav = this.fromFavicons($);
-      if (fav) return this.absolutize(fav, targetUrl);
+      if (fav) return this.absolutize(fav, targetUrlResolved);
 
       // Final fallback — Google's favicon proxy is small but always returns
-      // *something* recognizable for a domain.
+      // *something* recognizable for a domain. Use the resolved URL so a
+      // Google News wrapper falls back to the article's hostname, not
+      // news.google.com.
       try {
-        const u = new URL(targetUrl);
+        const u = new URL(targetUrlResolved);
         return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(u.hostname)}&sz=128`;
       } catch {
         return null;
@@ -136,6 +167,66 @@ export class ThumbnailService {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  private isWrapperHost(url: string): boolean {
+    try {
+      return WRAPPER_HOSTS.test(new URL(url).hostname);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Pull the real article URL out of a Google News stub page. The stub
+   * delivers a JS redirect (so `fetch` redirect-following never triggers)
+   * but leaves several breadcrumbs we can use, in priority order:
+   *   1. `<meta http-equiv="refresh" content="0;url=…">`
+   *   2. `<link rel="canonical">` if it points off the wrapper host
+   *   3. `<meta property="og:url">` if it points off the wrapper host
+   *   4. `<a data-n-au>` / `<a href>` in the body (last resort)
+   * Returns `null` if nothing usable is found — caller keeps the
+   * wrapper's HTML and the existing fallback chain handles it.
+   */
+  private unwrapDestination(
+    $: cheerio.CheerioAPI,
+    baseUrl: string,
+  ): string | null {
+    const offWrapper = (u: string | null): string | null => {
+      if (!u) return null;
+      const abs = this.absolutize(u, baseUrl);
+      if (!abs) return null;
+      try {
+        return WRAPPER_HOSTS.test(new URL(abs).hostname) ? null : abs;
+      } catch {
+        return null;
+      }
+    };
+
+    const refresh =
+      $('meta[http-equiv="refresh"]').attr('content') ||
+      $('meta[http-equiv="Refresh"]').attr('content');
+    if (refresh) {
+      const m = /url=([^;]+)/i.exec(refresh);
+      const found = offWrapper(m?.[1]?.trim() ?? null);
+      if (found) return found;
+    }
+
+    const canonical = offWrapper($('link[rel="canonical"]').attr('href') ?? null);
+    if (canonical) return canonical;
+
+    const ogUrl = offWrapper($('meta[property="og:url"]').attr('content') ?? null);
+    if (ogUrl) return ogUrl;
+
+    const anchor = offWrapper(
+      $('a[data-n-au]').first().attr('data-n-au') ??
+        $('a[data-n-au]').first().attr('href') ??
+        $('a[href^="http"]').first().attr('href') ??
+        null,
+    );
+    if (anchor) return anchor;
+
+    return null;
   }
 
   private absolutize(src: string, base: string): string | null {
