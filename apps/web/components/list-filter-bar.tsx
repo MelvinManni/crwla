@@ -21,7 +21,9 @@ const TIME_OPTIONS: { value: TimeWindow; label: string }[] = [
   { value: '90d', label: 'Last 90 days' },
 ];
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const PAGE_SIZE_OPTIONS = [20, 40, 60, 80, 100];
+
+export type SortOption = { value: string; label: string };
 
 export function ListFilterBar({
   filters,
@@ -36,6 +38,10 @@ export function ListFilterBar({
   keywordAnyLabel = 'Any keyword',
   timeLabel = 'Saved',
   className,
+  sort,
+  sortOptions,
+  onSort,
+  sortLabel = 'Sort',
 }: {
   filters: ListFilters;
   onFilters: (next: ListFilters) => void;
@@ -49,6 +55,12 @@ export function ListFilterBar({
   keywordAnyLabel?: string;
   timeLabel?: string;
   className?: string;
+  /** Current sort value (matches one of `sortOptions[i].value`). Omit to
+   *  hide the dropdown. */
+  sort?: string;
+  sortOptions?: SortOption[];
+  onSort?: (next: string) => void;
+  sortLabel?: string;
 }) {
   const hasFilters =
     filters.query.trim() !== '' || filters.keyword !== '' || filters.time !== 'all';
@@ -87,6 +99,15 @@ export function ListFilterBar({
         onChange={(v) => onFilters({ ...filters, time: v as TimeWindow })}
         options={TIME_OPTIONS}
       />
+
+      {sortOptions && sortOptions.length > 0 && onSort && (
+        <FilterSelect
+          label={sortLabel}
+          value={sort ?? sortOptions[0].value}
+          onChange={onSort}
+          options={sortOptions}
+        />
+      )}
 
       <FilterSelect
         label="Per page"

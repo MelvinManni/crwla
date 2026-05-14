@@ -18,6 +18,7 @@ import { StatusPill } from '@/components/status-pill';
 import { SearchCard } from '@/components/search-card';
 import { DeleteCrawlButton } from '@/components/delete-crawl-button';
 import { StartCrawlButton } from '@/components/start-crawl-button';
+import { Overflow } from '@/components/ui/overflow';
 import { Search } from 'lucide-react';
 import { ListFilterBar, type ListFilters } from '@/components/list-filter-bar';
 import { buildListSearch, type ListParams } from '@/lib/list-state';
@@ -82,6 +83,24 @@ export function DashboardClient({
 
   const [sortKey, setSortKey] = useState<SortKey>('lastRun');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  // Combined slug for the filter-bar dropdown so it stays in sync with the
+  // in-table sortable headers. Both write to the same `sortKey`/`sortDir`.
+  const SORT_OPTIONS: { value: `${SortKey}-${SortDir}`; label: string }[] = [
+    { value: 'lastRun-desc', label: 'Newest first' },
+    { value: 'lastRun-asc', label: 'Oldest first' },
+    { value: 'name-asc', label: 'Name A–Z' },
+    { value: 'name-desc', label: 'Name Z–A' },
+    { value: 'results-desc', label: 'Most results' },
+    { value: 'results-asc', label: 'Fewest results' },
+    { value: 'status-asc', label: 'Status A–Z' },
+  ];
+  const sortValue: `${SortKey}-${SortDir}` = `${sortKey}-${sortDir}`;
+  function onSort(v: string) {
+    const [k, d] = v.split('-') as [SortKey, SortDir];
+    setSortKey(k);
+    setSortDir(d);
+  }
 
   // Debounce only the free-text query so dropdown changes still apply
   // immediately. Other dimensions push to URL on every change.
@@ -209,7 +228,7 @@ export function DashboardClient({
       </div>
 
       {view === 'list' ? (
-        <div className="overflow-hidden rounded-[10px] border border-border bg-bg-elev">
+        <Overflow className="rounded-[10px] border border-border bg-bg-elev">
           <ListFilterBar
             filters={filters}
             onFilters={onFilters}
@@ -219,8 +238,11 @@ export function DashboardClient({
             onExportCsv={onExportCsv}
             onExportXls={onExportXls}
             className="sticky top-0 z-20"
+            sort={sortValue}
+            sortOptions={SORT_OPTIONS}
+            onSort={onSort}
           />
-          <Table>
+          <Table className="min-w-[760px]">
             <TableHeader>
               <TableRow>
                 <SortableHead
@@ -311,7 +333,7 @@ export function DashboardClient({
             total={total}
             onChange={setPage}
           />
-        </div>
+        </Overflow>
       ) : (
         <>
           <div className="mb-3 overflow-hidden rounded-[10px] border border-border bg-bg-elev">
@@ -324,6 +346,9 @@ export function DashboardClient({
               onExportCsv={onExportCsv}
               onExportXls={onExportXls}
               className="sticky top-0 z-20"
+              sort={sortValue}
+              sortOptions={SORT_OPTIONS}
+              onSort={onSort}
             />
           </div>
           {sorted.length === 0 ? (

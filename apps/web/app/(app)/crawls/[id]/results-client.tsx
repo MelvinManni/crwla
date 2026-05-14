@@ -4,10 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowDown,
   ArrowLeft,
-  ArrowUp,
-  ArrowUpDown,
   ExternalLink,
   Pencil,
   Play,
@@ -16,7 +13,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { KeywordChip } from '@/components/keyword-chip';
 import { StatusPill } from '@/components/status-pill';
 import { ViewToggle, type ViewMode } from '@/components/view-toggle';
@@ -51,9 +47,6 @@ type Initial = {
   pageSize: number;
   hasMore: boolean;
 };
-
-type SortKey = 'source' | 'title' | 'when';
-type SortDir = 'asc' | 'desc';
 
 // Google's CDNs serve the news-carousel thumbnails and the
 // `s2/favicons` proxy our scraper falls back to. We treat those as "no
@@ -357,8 +350,6 @@ function ResultsPanel({
     });
   }, [listParams.q, listParams.keyword, listParams.time]);
 
-  const [sortKey, setSortKey] = useState<SortKey>('when');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   function pushFilters(next: ListFilters, debounceQuery: boolean) {
@@ -384,34 +375,46 @@ function ResultsPanel({
     else if (queryChanged) pushFilters(next, true);
   }
 
+  // Sort dropdown in the filter header replaces the old sortable table
+  // columns. Value is a `<key>-<dir>` slug so the dropdown shows one
+  // option per natural reading order (e.g. "Newest first").
+  type Sort =
+    | 'when-desc'
+    | 'when-asc'
+    | 'source-asc'
+    | 'source-desc'
+    | 'title-asc'
+    | 'title-desc';
+  const SORT_OPTIONS: { value: Sort; label: string }[] = [
+    { value: 'when-desc', label: 'Newest first' },
+    { value: 'when-asc', label: 'Oldest first' },
+    { value: 'source-asc', label: 'Source A–Z' },
+    { value: 'source-desc', label: 'Source Z–A' },
+    { value: 'title-asc', label: 'Title A–Z' },
+    { value: 'title-desc', label: 'Title Z–A' },
+  ];
+  const [sort, setSort] = useState<Sort>('when-desc');
+
   const sorted = useMemo(() => {
-    const dir = sortDir === 'asc' ? 1 : -1;
     const out = [...results];
     out.sort((a, b) => {
-      switch (sortKey) {
-        case 'source':
-          return a.source.localeCompare(b.source) * dir;
-        case 'title':
-          return a.title.localeCompare(b.title) * dir;
-        case 'when':
-        default: {
-          const av = a.publishedAt ?? 0;
-          const bv = b.publishedAt ?? 0;
-          return (av - bv) * dir;
-        }
+      switch (sort) {
+        case 'when-desc':
+          return (b.publishedAt ?? 0) - (a.publishedAt ?? 0);
+        case 'when-asc':
+          return (a.publishedAt ?? 0) - (b.publishedAt ?? 0);
+        case 'source-asc':
+          return a.source.localeCompare(b.source);
+        case 'source-desc':
+          return b.source.localeCompare(a.source);
+        case 'title-asc':
+          return a.title.localeCompare(b.title);
+        case 'title-desc':
+          return b.title.localeCompare(a.title);
       }
     });
     return out;
-  }, [results, sortKey, sortDir]);
-
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDir(key === 'when' ? 'desc' : 'asc');
-    }
-  }
+  }, [results, sort]);
 
   function onView(next: ViewMode) {
     router.push(buildListSearch(base, { view: next, page: 1 }, listParams) as never);
@@ -458,6 +461,9 @@ function ResultsPanel({
           keywordLabel="Matches"
           keywordAnyLabel="Any keyword"
           timeLabel="Published"
+          sort={sort}
+          sortOptions={SORT_OPTIONS}
+          onSort={(v) => setSort(v as Sort)}
         />
       </div>
 
@@ -473,85 +479,65 @@ function ResultsPanel({
           </p>
         </div>
       ) : listParams.view === 'list' ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <SortableHead
-                label="Source"
-                active={sortKey === 'source'}
-                dir={sortDir}
-                onClick={() => toggleSort('source')}
-              />
-              <SortableHead
-                label="Title"
-                active={sortKey === 'title'}
-                dir={sortDir}
-                onClick={() => toggleSort('title')}
-              />
-              <SortableHead
-                label="When"
-                active={sortKey === 'when'}
-                dir={sortDir}
-                onClick={() => toggleSort('when')}
-                className="w-32"
-              />
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sorted.map((r) => (
-              <TableRow
-                key={r.id}
-                className="cursor-pointer"
-                onClick={() => window.open(r.url, '_blank', 'noreferrer')}
+        <ul className="divide-y divide-border">
+          {sorted.map((r) => (
+            <li key={r.id}>
+              <a
+                href={r.url}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-start gap-3.5 px-4 py-4 transition-colors hover:bg-bg-elev"
               >
-                <TableCell className="font-mono text-[10px] uppercase tracking-[0.06em] text-fg-muted">
-                  <div className="flex flex-col gap-1">
+                <ResultThumb r={r} />
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.06em] text-fg-muted">
                     <span className="truncate">{r.source}</span>
                     {r.tag && (
-                      <span className="self-start rounded-sm border border-border bg-bg-elev px-1 py-px font-mono text-[9px] normal-case text-fg">
+                      <span className="rounded-sm border border-border bg-bg-elev px-1 py-px text-fg">
                         {r.tag}
                       </span>
                     )}
                   </div>
-                </TableCell>
-                <TableCell>
-                  <div className="line-clamp-1 text-[13px] font-medium">{r.title}</div>
+                  <div className="line-clamp-2 text-[14px] font-medium leading-snug tracking-[-0.005em] group-hover:text-fg">
+                    {r.title}
+                  </div>
                   {r.snippet && (
-                    <div className="line-clamp-1 text-[12px] text-fg-muted">{r.snippet}</div>
+                    <div className="line-clamp-2 text-[12px] leading-relaxed text-fg-muted">
+                      {r.snippet}
+                    </div>
                   )}
-                </TableCell>
-                <TableCell className="font-mono text-[11px] text-fg-muted">
-                  {r.time ?? '—'}
-                </TableCell>
-                <TableCell className="text-right">
-                  <ExternalLink className="ml-auto h-3.5 w-3.5 text-fg-subtle" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  {r.time && (
+                    <div className="mt-0.5 font-mono text-[10px] text-fg-subtle">
+                      {r.time}
+                    </div>
+                  )}
+                </div>
+                <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-fg-subtle transition-colors group-hover:text-fg" />
+              </a>
+            </li>
+          ))}
+        </ul>
       ) : (
-        <div className="flex flex-col">
+        <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-4">
           {sorted.map((r) => (
             <a
               key={r.id}
               href={r.url}
               target="_blank"
               rel="noreferrer"
-              className="flex gap-3.5 border-b border-border bg-bg px-4 py-4 last:border-b-0 hover:bg-bg-elev"
+              className="group flex flex-col overflow-hidden rounded-[10px] border border-border bg-bg-elev transition-colors hover:border-border-strong"
             >
-              <ResultThumb r={r} />
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <ResultThumbWide r={r} />
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
                 <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.06em] text-fg-muted">
                   <span className="truncate">{r.source}</span>
                   {r.tag && (
-                    <span className="rounded-sm border border-border bg-bg-elev px-1 py-px text-fg">
+                    <span className="rounded-sm border border-border bg-bg px-1 py-px text-fg">
                       {r.tag}
                     </span>
                   )}
                 </div>
-                <div className="line-clamp-2 text-[14px] font-medium leading-snug tracking-[-0.005em]">
+                <div className="line-clamp-3 text-[14px] font-medium leading-snug tracking-[-0.005em] group-hover:text-fg">
                   {r.title}
                   <ExternalLink className="ml-1 inline h-3 w-3 text-fg-subtle" />
                 </div>
@@ -561,7 +547,9 @@ function ResultsPanel({
                   </div>
                 )}
                 {r.time && (
-                  <div className="mt-0.5 font-mono text-[10px] text-fg-subtle">{r.time}</div>
+                  <div className="mt-auto pt-1 font-mono text-[10px] text-fg-subtle">
+                    {r.time}
+                  </div>
                 )}
               </div>
             </a>
@@ -576,44 +564,6 @@ function ResultsPanel({
         onChange={onPage}
       />
     </div>
-  );
-}
-
-function SortableHead({
-  label,
-  active,
-  dir,
-  onClick,
-  className,
-}: {
-  label: string;
-  active: boolean;
-  dir: SortDir;
-  onClick: () => void;
-  className?: string;
-}) {
-  return (
-    <TableHead className={cn('select-none', className)}>
-      <button
-        type="button"
-        onClick={onClick}
-        className={cn(
-          'inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.06em] hover:text-fg',
-          active ? 'text-fg' : 'text-fg-subtle',
-        )}
-      >
-        {label}
-        {active ? (
-          dir === 'asc' ? (
-            <ArrowUp className="h-3 w-3" />
-          ) : (
-            <ArrowDown className="h-3 w-3" />
-          )
-        ) : (
-          <ArrowUpDown className="h-3 w-3 opacity-50" />
-        )}
-      </button>
-    </TableHead>
   );
 }
 
@@ -643,6 +593,48 @@ function ResultThumb({ r }: { r: ResultView }) {
         className={cn(isSite ? 'h-9 w-9 object-contain' : 'h-full w-full object-cover')}
         onError={() => {
           // Cover failed → try the site favicon. Site favicon failed → striped.
+          if (thumb.kind === 'cover') {
+            const fav = siteFavicon(r.url);
+            setThumb(fav ? { kind: 'site', src: fav } : { kind: 'none' });
+          } else {
+            setThumb({ kind: 'none' });
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * Wide thumbnail used for grid cards. Same downgrade chain as
+ * {@link ResultThumb} but fills the card width at a fixed aspect ratio
+ * (16:9-ish) instead of a 76×76 square — matches typical news/article
+ * card layouts.
+ */
+function ResultThumbWide({ r }: { r: ResultView }) {
+  const initial = pickThumbnail(r);
+  const [thumb, setThumb] = useState<Thumb>(initial);
+
+  if (thumb.kind === 'none') {
+    return (
+      <div className="thumb-striped aspect-[16/9] w-full border-b border-border" />
+    );
+  }
+
+  const isSite = thumb.kind === 'site';
+  return (
+    <div
+      className={cn(
+        'aspect-[16/9] w-full overflow-hidden border-b border-border',
+        isSite ? 'grid place-items-center bg-bg-sunk' : 'bg-bg-sunk',
+      )}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={thumb.src}
+        alt=""
+        className={cn(isSite ? 'h-12 w-12 object-contain' : 'h-full w-full object-cover')}
+        onError={() => {
           if (thumb.kind === 'cover') {
             const fav = siteFavicon(r.url);
             setThumb(fav ? { kind: 'site', src: fav } : { kind: 'none' });

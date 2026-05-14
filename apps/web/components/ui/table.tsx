@@ -3,13 +3,16 @@ import { cn } from '@/lib/utils';
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
-      <table
-        ref={ref}
-        className={cn('w-full caption-bottom text-[13px]', className)}
-        {...props}
-      />
-    </div>
+    // No inner overflow wrapper — callers wrap in `<Overflow>` so the
+    // filter bar + table + pagination scroll together horizontally, and
+    // sticky headers can pin against the outer container. Default
+    // `min-w-[640px]` keeps columns from crushing; override with a wider
+    // `min-w-[…]` for tables with more columns.
+    <table
+      ref={ref}
+      className={cn('w-full min-w-[640px] caption-bottom text-[13px]', className)}
+      {...props}
+    />
   ),
 );
 Table.displayName = 'Table';

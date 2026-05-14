@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Overflow } from '@/components/ui/overflow';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -186,7 +187,7 @@ export function AlertsClient({
           </p>
         </div>
       ) : effectiveView === 'list' ? (
-        <div className="overflow-hidden rounded-[10px] border border-border bg-bg-elev">
+        <Overflow className="rounded-[10px] border border-border bg-bg-elev">
           <Table>
             <TableHeader>
               <TableRow>
@@ -237,7 +238,7 @@ export function AlertsClient({
             </TableBody>
           </Table>
           <Pagination page={listParams.page} pageSize={listParams.pageSize} total={total} onChange={setPage} />
-        </div>
+        </Overflow>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
