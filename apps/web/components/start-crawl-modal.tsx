@@ -222,12 +222,12 @@ function StartCrawlDialog({
             </div>
           </TooltipProvider>
 
-          {allowed.length > 0 && (
+          {/* {allowed.length > 0 && (
             <p className="font-mono text-[11px] text-fg-subtle">
               Sources from your {ent?.plan.name ?? ''} plan:{' '}
               {allowed.map((c) => CATEGORY_LABEL[c] ?? c).join(', ')}.
             </p>
-          )}
+          )} */}
 
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
