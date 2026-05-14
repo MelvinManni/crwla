@@ -10,11 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import TooltipGroup from '@/components/tooltip-group';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -160,23 +156,22 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
             <Label htmlFor="strict" className="cursor-pointer">
               Strict mode
             </Label>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <button
-                    type="button"
-                    aria-label="What is strict mode?"
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <Info size={14} aria-hidden />
-                  </button>
-                }
-              />
-              <TooltipContent className="max-w-[260px] text-left leading-snug">
-                Only keeps results that contain <strong>all</strong> of your keywords
-                in the title or snippet. Applied on the next run.
-              </TooltipContent>
-            </Tooltip>
+            <TooltipGroup
+              message={
+                <span>
+                  Only keeps results that contain <strong>all</strong> of your keywords
+                  in the title or snippet. Applied on the next run.
+                </span>
+              }
+            >
+              <button
+                type="button"
+                aria-label="What is strict mode?"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Info size={14} aria-hidden />
+              </button>
+            </TooltipGroup>
           </div>
           <Switch id="strict" checked={strict} onCheckedChange={setStrict} />
         </div>

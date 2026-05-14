@@ -29,7 +29,7 @@ export function Pagination({
       )}
     >
       <span className="font-mono text-[11px] text-fg-muted">
-        {from}–{to} of {total}
+        {from}-{to} of {total}
       </span>
       <div className="flex items-center gap-1">
         <Button

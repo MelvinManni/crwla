@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   createContext,
@@ -7,43 +7,42 @@ import {
   useEffect,
   useState,
   type ReactNode,
-} from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+} from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Info } from 'lucide-react';
-import { KeywordInput } from '@/components/keyword-input';
-import { CronPicker } from '@/components/cron-picker';
-import { useEntitlements } from '@/components/billing/entitlements-provider';
-import { useCreateCrawl } from '@/lib/queries/crawls';
-import type { CronPreset } from '@/lib/types';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
-const CRON_PRIORITY: CronPreset[] = ['HOURLY', 'DAILY', 'WEEKLY', 'MANUAL'];
+import { Info } from "lucide-react";
+import { KeywordInput } from "@/components/keyword-input";
+import { CronPicker } from "@/components/cron-picker";
+import { useEntitlements } from "@/components/billing/entitlements-provider";
+import { useCreateCrawl } from "@/lib/queries/crawls";
+import type { CronPreset } from "@/lib/types";
+import TooltipGroup from "./tooltip-group";
+
+const CRON_PRIORITY: CronPreset[] = ["HOURLY", "DAILY", "WEEKLY", "MANUAL"];
 const CATEGORY_LABEL: Record<string, string> = {
-  news: 'News',
-  social: 'Social',
-  forums: 'Forums',
-  blogs: 'Blogs',
+  news: "News",
+  social: "Social",
+  forums: "Forums",
+  blogs: "Blogs",
 };
 
-function pickDefaultCron(allowed: ReadonlyArray<string> | undefined): CronPreset {
-  if (!allowed || allowed.length === 0) return 'DAILY';
-  return CRON_PRIORITY.find((p) => allowed.includes(p)) ?? 'MANUAL';
+function pickDefaultCron(
+  allowed: ReadonlyArray<string> | undefined,
+): CronPreset {
+  if (!allowed || allowed.length === 0) return "DAILY";
+  return CRON_PRIORITY.find((p) => allowed.includes(p)) ?? "MANUAL";
 }
 
 type Ctx = {
@@ -55,7 +54,8 @@ const StartCrawlContext = createContext<Ctx | null>(null);
 
 export function useStartCrawl() {
   const ctx = useContext(StartCrawlContext);
-  if (!ctx) throw new Error('useStartCrawl must be used within StartCrawlProvider');
+  if (!ctx)
+    throw new Error("useStartCrawl must be used within StartCrawlProvider");
   return ctx;
 }
 
@@ -71,10 +71,10 @@ export function StartCrawlProvider({ children }: { children: ReactNode }) {
   // Auto-open when any page is hit with `?new=1`, then strip the param so a
   // refresh doesn't re-trigger the modal.
   useEffect(() => {
-    if (searchParams.get('new') !== '1') return;
+    if (searchParams.get("new") !== "1") return;
     setIsOpen(true);
     const next = new URLSearchParams(searchParams.toString());
-    next.delete('new');
+    next.delete("new");
     const qs = next.toString();
     router.replace((qs ? `${pathname}?${qs}` : pathname) as never);
   }, [searchParams, pathname, router]);
@@ -97,21 +97,21 @@ function StartCrawlDialog({
   const router = useRouter();
   const { ent } = useEntitlements();
   const createCrawl = useCreateCrawl();
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
   const [keywords, setKeywords] = useState<string[]>([]);
-  const [cron, setCron] = useState<CronPreset>('DAILY');
+  const [cron, setCron] = useState<CronPreset>("DAILY");
   const [cronTouched, setCronTouched] = useState(false);
-  const [filterPrompt, setFilterPrompt] = useState('');
+  const [filterPrompt, setFilterPrompt] = useState("");
   const [strict, setStrict] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Reset form whenever the dialog opens.
   useEffect(() => {
     if (open) {
-      setName('');
+      setName("");
       setKeywords([]);
       setCronTouched(false);
-      setFilterPrompt('');
+      setFilterPrompt("");
       setStrict(false);
       setError(null);
       createCrawl.reset();
@@ -130,8 +130,8 @@ function StartCrawlDialog({
 
   function submit() {
     setError(null);
-    if (!name.trim()) return setError('Name is required.');
-    if (keywords.length === 0) return setError('Add at least one keyword.');
+    if (!name.trim()) return setError("Name is required.");
+    if (keywords.length === 0) return setError("Add at least one keyword.");
     createCrawl.mutate(
       { name: name.trim(), keywords, cron, filterPrompt, strict },
       {
@@ -184,8 +184,10 @@ function StartCrawlDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="crawl-filter">
-              Filter prompt{' '}
-              <span className="font-normal text-muted-foreground">(optional)</span>
+              Filter prompt{" "}
+              <span className="font-normal text-muted-foreground">
+                (optional)
+              </span>
             </Label>
             <Textarea
               id="crawl-filter"
@@ -201,26 +203,30 @@ function StartCrawlDialog({
               <Label htmlFor="crawl-strict" className="cursor-pointer">
                 Strict mode
               </Label>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <button
-                      type="button"
-                      aria-label="What is strict mode?"
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Info size={14} aria-hidden />
-                    </button>
-                  }
-                />
-                <TooltipContent className="max-w-[240px] text-left leading-snug">
-                  Only keeps results that contain <strong>all</strong> of your keywords
-                  in the title or snippet. When off, a result matching any single
-                  keyword is kept.
-                </TooltipContent>
-              </Tooltip>
+
+              <TooltipGroup
+                message={
+                  <span>
+                    Only keeps results that contain <strong>all</strong> of your
+                    keywords in the title or snippet. When off, a result
+                    matching any single keyword is kept.
+                  </span>
+                }
+              >
+                <button
+                  type="button"
+                  aria-label="What is strict mode?"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Info size={14} aria-hidden />
+                </button>
+              </TooltipGroup>
             </div>
-            <Switch id="crawl-strict" checked={strict} onCheckedChange={setStrict} />
+            <Switch
+              id="crawl-strict"
+              checked={strict}
+              onCheckedChange={setStrict}
+            />
           </div>
 
           {/* {allowed.length > 0 && (
