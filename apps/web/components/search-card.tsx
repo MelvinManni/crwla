@@ -1,25 +1,37 @@
 import Link from 'next/link';
 import { KeywordChip } from '@/components/keyword-chip';
 import { StatusPill } from '@/components/status-pill';
+import { DeleteCrawlButton } from '@/components/delete-crawl-button';
 import type { SearchView } from '@/lib/types';
 
 export function SearchCard({ search }: { search: SearchView }) {
   return (
-    <Link
-      href={`/crawls/${search.id}`}
-      className="block rounded-[10px] border border-border bg-bg-elev p-4 transition-colors hover:border-border-strong"
-    >
-      <div className="flex items-start justify-between gap-3">
+    <div className="group relative rounded-[10px] border border-border bg-bg-elev p-4 transition-colors hover:border-border-strong">
+      {/* Full-card click target. Stretched link pattern so interactive
+          siblings (delete button) can live outside the anchor without
+          nesting interactives. */}
+      <Link
+        href={`/crawls/${search.id}`}
+        aria-label={`Open ${search.name}`}
+        className="absolute inset-0 z-0 rounded-[10px]"
+      />
+
+      <div className="relative z-10 flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-[15px] font-semibold tracking-tight">{search.name}</h3>
           <p className="mt-1 font-mono text-[11px] text-fg-subtle">
             {search.results} results
           </p>
         </div>
-        <StatusPill status={search.status} />
+        <div className="flex items-center gap-1">
+          <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+            <DeleteCrawlButton id={search.id} name={search.name} />
+          </span>
+          <StatusPill status={search.status} />
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="pointer-events-none relative z-0 mt-3 flex flex-wrap gap-1.5">
         {search.keywords.slice(0, 6).map((k) => (
           <KeywordChip key={k}>{k}</KeywordChip>
         ))}
@@ -30,7 +42,7 @@ export function SearchCard({ search }: { search: SearchView }) {
         )}
       </div>
 
-      <div className="mt-3 flex gap-4 border-t border-dashed border-border pt-3 font-mono text-[11px] text-fg-muted">
+      <div className="pointer-events-none relative z-0 mt-3 flex gap-4 border-t border-dashed border-border pt-3 font-mono text-[11px] text-fg-muted">
         <div>
           <span className="mr-1 text-fg-subtle">cron</span>
           {search.cronLabel.toLowerCase()}
@@ -44,6 +56,6 @@ export function SearchCard({ search }: { search: SearchView }) {
           {search.nextRun}
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

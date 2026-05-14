@@ -103,7 +103,7 @@ export class SearchesService {
   ) {
     const page = Math.max(1, opts.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, opts.pageSize ?? 20));
-    const where: Prisma.SearchWhereInput = { userId };
+    const where: Prisma.SearchWhereInput = { userId, deletedAt: null };
     const q = opts.q?.trim();
     if (q) {
       where.OR = [
@@ -140,7 +140,7 @@ export class SearchesService {
 
   private async getOwned(userId: string, id: string) {
     const s = await this.prisma.search.findFirst({
-      where: { id, userId },
+      where: { id, userId, deletedAt: null },
       include: { _count: { select: { results: { where: { hidden: false } } } } },
     });
     if (!s) throw new NotFoundException('not found');
@@ -237,7 +237,13 @@ export class SearchesService {
   async remove(userId: string, id: string) {
     const existing = await this.getOwned(userId, id);
     await this.scrapeQueue.unschedule(existing.id);
-    await this.prisma.search.delete({ where: { id: existing.id } });
+    // Soft delete: keep the row + history (runs, results, alerts) so a
+    // future "trash bin" / restore flow can recover it. List/get queries
+    // filter on `deletedAt: null` so the user no longer sees it.
+    await this.prisma.search.update({
+      where: { id: existing.id },
+      data: { deletedAt: new Date() },
+    });
     return { ok: true };
   }
 

@@ -34,6 +34,7 @@ export class ScrapeProcessor extends WorkerHost {
       include: { user: { select: { disabledSourceCategories: true } } },
     });
     if (!search) throw new Error(`search ${searchId} not found`);
+    if (search.deletedAt) return { skipped: true };
     if (search.status === SearchStatus.PAUSED) return { skipped: true };
 
     const startedAt = new Date();

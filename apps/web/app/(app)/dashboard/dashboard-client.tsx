@@ -16,6 +16,7 @@ import { Pagination } from '@/components/pagination';
 import { KeywordChip } from '@/components/keyword-chip';
 import { StatusPill } from '@/components/status-pill';
 import { SearchCard } from '@/components/search-card';
+import { DeleteCrawlButton } from '@/components/delete-crawl-button';
 import { ListFilterBar, type ListFilters } from '@/components/list-filter-bar';
 import { buildListSearch, type ListParams } from '@/lib/list-state';
 import { exportCsv, exportXls, type ExportColumn } from '@/lib/export';
@@ -269,7 +270,10 @@ export function DashboardClient({
                       <StatusPill status={j.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <ChevronRight className="ml-auto h-3.5 w-3.5 text-fg-subtle" />
+                      <div className="flex items-center justify-end gap-1">
+                        <DeleteCrawlButton id={j.id} name={j.name} />
+                        <ChevronRight className="h-3.5 w-3.5 text-fg-subtle" />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

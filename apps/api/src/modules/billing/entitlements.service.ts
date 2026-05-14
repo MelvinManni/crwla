@@ -102,7 +102,7 @@ export class EntitlementsService {
     const ent = await this.ensureFor(userId);
     const cap = ent.limits.savedSearches;
     if (cap < 0) return;
-    const used = await this.prisma.search.count({ where: { userId } });
+    const used = await this.prisma.search.count({ where: { userId, deletedAt: null } });
     if (used >= cap) {
       throw this.limitError(`Saved searches limit reached (${cap}). Upgrade your plan to add more.`);
     }

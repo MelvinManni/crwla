@@ -177,12 +177,14 @@ model Search {
   lastError    String?      @map("last_error")
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
+  deletedAt    DateTime?    @map("deleted_at")
 
   runs    Run[]
   results Result[]
   alerts  Alert[]
 
   @@index([userId, createdAt])
+  @@index([deletedAt])
   @@map("search")
 }
 

@@ -37,7 +37,9 @@ export class ResultsService {
   ) {}
 
   private async ownedSearch(userId: string, searchId: string) {
-    const s = await this.prisma.search.findFirst({ where: { id: searchId, userId } });
+    const s = await this.prisma.search.findFirst({
+      where: { id: searchId, userId, deletedAt: null },
+    });
     if (!s) throw new NotFoundException('not found');
     return s;
   }

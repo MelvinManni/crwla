@@ -25,7 +25,7 @@ export class SchedulerService implements OnModuleInit {
    */
   async reschedule(): Promise<{ rescheduled: number }> {
     const searches = await this.prisma.search.findMany({
-      where: { status: { not: SearchStatus.PAUSED } },
+      where: { status: { not: SearchStatus.PAUSED }, deletedAt: null },
       select: { id: true, cron: true },
     });
     let n = 0;

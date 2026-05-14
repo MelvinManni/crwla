@@ -18,7 +18,7 @@ export class RunsService {
 
   async listFor(userId: string, searchId: string) {
     const search = await this.prisma.search.findFirst({
-      where: { id: searchId, userId },
+      where: { id: searchId, userId, deletedAt: null },
       select: { id: true },
     });
     if (!search) throw new NotFoundException('not found');
