@@ -79,6 +79,18 @@ export function urlHash(u: string): string {
   return createHash('sha1').update(canonicalizeUrl(u)).digest('hex').slice(0, 16);
 }
 
+/**
+ * Hash a title or snippet for the 2-of-3 duplicate constraint
+ * `(searchId, title_hash, snippet_hash)`. Normalization is aggressive on
+ * purpose — same article reposted with whitespace tweaks or capitalisation
+ * differences should still collide. `null`/`''` both hash to the same value
+ * so two rows missing a snippet are treated as identical on that axis.
+ */
+export function textHash(s: string | null | undefined): string {
+  const normalized = (s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+  return createHash('sha1').update(normalized).digest('hex').slice(0, 16);
+}
+
 function decodeEntities(s: string): string {
   if (!s) return s;
   return s

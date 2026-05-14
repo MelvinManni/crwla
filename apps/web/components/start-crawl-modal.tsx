@@ -1,14 +1,8 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useStartCrawlStore } from "@/lib/stores/ui";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -46,45 +40,39 @@ function pickDefaultCron(
   return CRON_PRIORITY.find((p) => allowed.includes(p)) ?? "MANUAL";
 }
 
-type Ctx = {
-  open: () => void;
-  close: () => void;
-};
-
-const StartCrawlContext = createContext<Ctx | null>(null);
-
+/**
+ * Subscribe to the zustand UI store. Returns the same { open, close } API
+ * the previous context exposed so call-sites don't change.
+ */
 export function useStartCrawl() {
-  const ctx = useContext(StartCrawlContext);
-  if (!ctx)
-    throw new Error("useStartCrawl must be used within StartCrawlProvider");
-  return ctx;
+  const openModal = useStartCrawlStore((s) => s.openModal);
+  const closeModal = useStartCrawlStore((s) => s.closeModal);
+  return { open: openModal, close: closeModal };
 }
 
 export function StartCrawlProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isOpen, setIsOpen] = useState(false);
-
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
+  const isOpen = useStartCrawlStore((s) => s.open);
+  const setOpen = useStartCrawlStore((s) => s.setOpen);
 
   // Auto-open when any page is hit with `?new=1`, then strip the param so a
   // refresh doesn't re-trigger the modal.
   useEffect(() => {
     if (searchParams.get("new") !== "1") return;
-    setIsOpen(true);
+    setOpen(true);
     const next = new URLSearchParams(searchParams.toString());
     next.delete("new");
     const qs = next.toString();
     router.replace((qs ? `${pathname}?${qs}` : pathname) as never);
-  }, [searchParams, pathname, router]);
+  }, [searchParams, pathname, router, setOpen]);
 
   return (
-    <StartCrawlContext.Provider value={{ open, close }}>
+    <>
       {children}
-      <StartCrawlDialog open={isOpen} onOpenChange={setIsOpen} />
-    </StartCrawlContext.Provider>
+      <StartCrawlDialog open={isOpen} onOpenChange={setOpen} />
+    </>
   );
 }
 
@@ -183,8 +171,21 @@ function StartCrawlDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Keywords</Label>
-            <KeywordInput value={keywords} onChange={setKeywords} autoFocus />
+            <Label>
+              Keywords
+              {typeof keywordCap === 'number' && (
+                <span className="ml-1 font-mono text-[11px] font-normal text-fg-subtle">
+                  {keywords.length}/{keywordCap}
+                </span>
+              )}
+            </Label>
+            <KeywordInput
+              value={keywords}
+              onChange={setKeywords}
+              autoFocus
+              max={keywordCap}
+              onMaxExceeded={onKeywordCapExceeded}
+            />
           </div>
 
           <div className="space-y-1.5">

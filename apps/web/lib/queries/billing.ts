@@ -33,9 +33,21 @@ export function useBillingMe(opts?: { initialData?: Entitlements }) {
 }
 
 export function useCheckout() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { tier: string; interval: string }) =>
       api.post<{ url: string | null; downgraded?: boolean }>('/billing/checkout', input),
+    onSuccess: (out) => {
+      // Downgrade-to-Free returns synchronously (no Polar redirect) so the
+      // client-side entitlements cache must be invalidated here — otherwise
+      // limits/usage panels keep the old plan until a hard reload. For paid
+      // upgrades (out.url present), the redirect → Polar → return to
+      // `/billing?status=success` re-mounts the SSR'd page; billing-client
+      // handles invalidation on that return.
+      if (out.downgraded) {
+        qc.invalidateQueries({ queryKey: qk.billing.me() });
+      }
+    },
   });
 }
 

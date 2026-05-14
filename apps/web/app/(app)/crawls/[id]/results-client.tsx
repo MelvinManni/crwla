@@ -124,6 +124,17 @@ export function ResultsClient({
   // Reload spinner — separate from mutations.
   const [reloading, setReloading] = useState(false);
 
+  // SSR re-runs whenever a URL param changes (page, pageSize, filters), but
+  // because `results`/`totalResults` are useState-seeded from `initial`,
+  // they only pick up the first SSR pass. Without this sync, changing the
+  // page-size dropdown updates the URL + SSR fetch but the table keeps
+  // rendering the original slice. Track the SSR-derived prop and replay
+  // it into local state whenever the page/pageSize key changes.
+  useEffect(() => {
+    setResults(initial.results);
+    setTotalResults(initial.total);
+  }, [initial]);
+
   const busy: 'run' | 'filter' | 'reload' | null = runMut.isPending
     ? 'run'
     : filterMut.isPending

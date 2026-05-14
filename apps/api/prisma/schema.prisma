@@ -214,7 +214,9 @@ model Result {
   url         String
   urlHash     String    @map("url_hash")
   title       String
+  titleHash   String    @default("") @map("title_hash")
   snippet     String?
+  snippetHash String    @default("") @map("snippet_hash")
   source      String
   location    String?
   score       Float?
@@ -236,6 +238,10 @@ model Result {
   searchVector Unsupported("tsvector")? @default(dbgenerated("to_tsvector('english'::regconfig, ((((COALESCE(title, ''::text) || ' '::text) || COALESCE(snippet, ''::text)) || ' '::text) || COALESCE((metadata ->> 'keywords'::text), ''::text)))")) @map("search_vector")
 
   @@unique([searchId, urlHash])
+  // 2-of-3 dedup: combined with the url-hash unique above, this blocks any
+  // pair that matches on (url+title), (url+snippet), or (title+snippet).
+  // Hashes normalize whitespace + case so trivial reposts collide.
+  @@unique([searchId, titleHash, snippetHash])
   @@index([searchId, fetchedAt(sort: Desc)])
   @@index([source])
   @@index([location])

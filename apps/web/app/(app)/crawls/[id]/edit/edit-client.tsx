@@ -26,11 +26,15 @@ import { KeywordInput } from '@/components/keyword-input';
 import { CronPicker } from '@/components/cron-picker';
 import { useToast } from '@/hooks/use-toast';
 import { useDeleteCrawl, useUpdateCrawl } from '@/lib/queries/crawls';
+import { useEntitlements } from '@/components/billing/entitlements-provider';
+import { useUpgradeModal } from '@/components/billing/upgrade-modal';
 import type { CronPreset, SearchView } from '@/lib/types';
 
 export function EditSearchClient({ initial }: { initial: SearchView }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { ent } = useEntitlements();
+  const { showLimit } = useUpgradeModal();
   const update = useUpdateCrawl();
   const remove = useDeleteCrawl();
   const [name, setName] = useState(initial.name);
@@ -39,6 +43,18 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
   const [filterPrompt, setFilterPrompt] = useState(initial.filterPrompt);
   const [strict, setStrict] = useState(initial.strict);
   const [paused, setPaused] = useState(initial.status === 'PAUSED');
+  const keywordCap = ent?.limits.keywordsPerSearch;
+
+  function onKeywordCapExceeded(attempted: number) {
+    if (typeof keywordCap !== 'number') return;
+    const planName = ent?.plan.name ?? 'your plan';
+    showLimit({
+      reason: `${planName} allows ${keywordCap} keyword${
+        keywordCap === 1 ? '' : 's'
+      } per crawl — ${attempted - keywordCap} dropped. Upgrade to add more.`,
+      recommendedTier: 'Pro',
+    });
+  }
 
   const saving = update.isPending;
   const deleting = remove.isPending;
@@ -122,8 +138,20 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Keywords</Label>
-          <KeywordInput value={keywords} onChange={setKeywords} />
+          <Label>
+            Keywords
+            {typeof keywordCap === 'number' && (
+              <span className="ml-1 font-mono text-[11px] font-normal text-fg-subtle">
+                {keywords.length}/{keywordCap}
+              </span>
+            )}
+          </Label>
+          <KeywordInput
+            value={keywords}
+            onChange={setKeywords}
+            max={keywordCap}
+            onMaxExceeded={onKeywordCapExceeded}
+          />
         </div>
 
         {initial.sources.length > 0 && (

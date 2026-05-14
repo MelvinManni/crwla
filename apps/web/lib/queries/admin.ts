@@ -124,6 +124,11 @@ export function useSavePlan() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.admin.billingPlans() });
       qc.invalidateQueries({ queryKey: qk.billing.plans() });
+      // Active subscribers' entitlements snapshot the plan's limits, so an
+      // admin edit invalidates per-user `/billing/me` too. Without this,
+      // limit displays (e.g. saved-searches cap on the dashboard) stay
+      // stale until a hard reload.
+      qc.invalidateQueries({ queryKey: qk.billing.me() });
     },
   });
 }

@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Check, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { qk } from '@/lib/queries/keys';
 import {
   useBillingPlans,
   useBillingMe,
@@ -29,10 +31,31 @@ export function BillingClient({
   initialMine: Entitlements;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const qc = useQueryClient();
   const { toast } = useToast();
 
   const plansQuery = useBillingPlans({ initialData: initialPlans });
   const mineQuery = useBillingMe({ initialData: initialMine });
+
+  // Returning from Polar/Stripe lands on `/billing?status=success`. SSR
+  // already re-fetched fresh entitlements, but other in-memory consumers
+  // (sidebar plan badge, entitlements provider, keyword-cap counters) hold
+  // the pre-upgrade cache. Invalidate once, refresh the RSC tree, and clean
+  // the URL so a refresh doesn't re-trigger.
+  useEffect(() => {
+    if (searchParams.get('status') !== 'success') return;
+    qc.invalidateQueries({ queryKey: qk.billing.me() });
+    router.refresh();
+    toast({ title: 'Plan updated' });
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('status');
+    const qs = next.toString();
+    router.replace((qs ? `${pathname}?${qs}` : pathname) as never);
+    // Run once per status=success hit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const plans = plansQuery.data?.plans ?? initialPlans.plans;
   const mine = mineQuery.data ?? initialMine;

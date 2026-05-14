@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,42 +12,43 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useUpgradeStore } from "@/lib/stores/ui";
 
-type Ctx = {
-  /**
-   * Show the upgrade modal. Used by `lib/api.ts` when the API replies with
-   * 403 + `code: 'PLAN_LIMIT_EXCEEDED'` and by feature components that want
-   * to block access to a paid feature pre-emptively.
-   */
-  showLimit: (input: { reason: string; recommendedTier?: string }) => void;
-};
-
-const UpgradeContext = createContext<Ctx | null>(null);
+/**
+ * Show the upgrade modal. Used by `lib/api.ts` (via the window event below)
+ * when the API replies with 403 + `code: 'PLAN_LIMIT_EXCEEDED'`, and by
+ * feature components that want to block access to a paid feature
+ * pre-emptively. Identical shape to the old context API.
+ */
+export function useUpgradeModal() {
+  const showLimit = useUpgradeStore((s) => s.showLimit);
+  return { showLimit };
+}
 
 export function UpgradeModalProvider({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState<string>("");
-  const [recommended, setRecommended] = useState<string | null>(null);
-
-  const showLimit = useCallback<Ctx["showLimit"]>((input) => {
-    setReason(input.reason);
-    setRecommended(input.recommendedTier ?? null);
-    setOpen(true);
-  }, []);
+  const open = useUpgradeStore((s) => s.open);
+  const setOpen = useUpgradeStore((s) => s.setOpen);
+  const close = useUpgradeStore((s) => s.close);
+  const reason = useUpgradeStore((s) => s.reason);
+  const recommended = useUpgradeStore((s) => s.recommendedTier);
 
   // Bridge the cross-cutting `crwla:plan-limit-exceeded` event so non-React
-  // callers (e.g. lib/api.ts) can trigger the modal.
+  // callers (e.g. lib/api.ts) can trigger the modal without importing the
+  // store directly.
   useEffect(() => {
     function on(e: Event) {
       const d = (e as CustomEvent<UpgradeEventDetail>).detail;
-      showLimit({ reason: d.reason, recommendedTier: d.recommendedTier });
+      useUpgradeStore.getState().showLimit({
+        reason: d.reason,
+        recommendedTier: d.recommendedTier,
+      });
     }
     window.addEventListener(UPGRADE_EVENT, on);
     return () => window.removeEventListener(UPGRADE_EVENT, on);
-  }, [showLimit]);
+  }, []);
 
   return (
-    <UpgradeContext.Provider value={{ showLimit }}>
+    <>
       {children}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-xl">
@@ -71,29 +65,17 @@ export function UpgradeModalProvider({ children }: { children: ReactNode }) {
             </p>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button variant="outline" onClick={close}>
               Not now
             </Button>
-            <Button
-              render={<Link href="/billing" />}
-              onClick={() => setOpen(false)}
-            >
+            <Button render={<Link href="/billing" />} onClick={close}>
               View plans
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </UpgradeContext.Provider>
+    </>
   );
-}
-
-export function useUpgradeModal(): Ctx {
-  const ctx = useContext(UpgradeContext);
-  if (!ctx)
-    throw new Error(
-      "useUpgradeModal must be used inside <UpgradeModalProvider>",
-    );
-  return ctx;
 }
 
 /** Top-level event so non-React callers (lib/api.ts) can fire the modal. */

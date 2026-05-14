@@ -6,7 +6,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { ThumbnailService } from '../../modules/scraper/thumbnail.service';
 import { SourceRegistry } from '../../modules/scraper/sources/source.registry';
 import { DEFAULT_SOURCES } from '../../modules/scraper/sources/source.types';
-import type { ScrapedItem } from '../../modules/scraper/google-news.service';
+import { textHash, type ScrapedItem } from '../../modules/scraper/google-news.service';
 import { FilterService } from '../../modules/filter/filter.service';
 import { ConfigService } from '@nestjs/config';
 import { SearchIndexQueue } from '../search-index/search-index.queue';
@@ -123,12 +123,18 @@ export class ScrapeProcessor extends WorkerHost {
             runId: run.id,
             source: r.source,
             title: r.title,
+            titleHash: textHash(r.title),
             url: r.url,
             urlHash: r.urlHash,
             snippet: r.snippet,
+            snippetHash: textHash(r.snippet),
             imageUrl: r.imageUrl,
             publishedAt: r.publishedAt ? new Date(r.publishedAt) : null,
           })),
+          // skipDuplicates handles both unique constraints:
+          //   (search_id, url_hash) — same URL within a search
+          //   (search_id, title_hash, snippet_hash) — same title + snippet
+          // The combination enforces "2 of (url, title, snippet) match → dup".
           skipDuplicates: true,
           select: { id: true, title: true, url: true, snippet: true, source: true, publishedAt: true, fetchedAt: true },
         }) as unknown as Array<{ id: string }>;
