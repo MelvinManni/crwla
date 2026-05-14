@@ -13,7 +13,6 @@ import { Spinner } from '@/components/ui/spinner';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
@@ -156,7 +155,6 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
           <Textarea id="filter" value={filterPrompt} onChange={(e) => setFilterPrompt(e.target.value)} />
         </div>
 
-        <TooltipProvider>
           <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2.5">
             <div className="flex items-center gap-1.5">
               <Label htmlFor="strict" className="cursor-pointer">
@@ -178,7 +176,6 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
             </div>
             <Switch id="strict" checked={strict} onCheckedChange={setStrict} />
           </div>
-        </TooltipProvider>
 
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={paused} onChange={(e) => setPaused(e.target.checked)} />

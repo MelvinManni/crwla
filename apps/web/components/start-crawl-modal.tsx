@@ -24,7 +24,6 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
@@ -197,7 +196,6 @@ function StartCrawlDialog({
             />
           </div>
 
-          <TooltipProvider>
             <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2.5">
               <div className="flex items-center gap-1.5">
                 <Label htmlFor="crawl-strict" className="cursor-pointer">
@@ -221,7 +219,6 @@ function StartCrawlDialog({
               </div>
               <Switch id="crawl-strict" checked={strict} onCheckedChange={setStrict} />
             </div>
-          </TooltipProvider>
 
           {/* {allowed.length > 0 && (
             <p className="font-mono text-[11px] text-fg-subtle">
