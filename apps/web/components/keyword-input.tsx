@@ -9,19 +9,36 @@ export function KeywordInput({
   onChange,
   placeholder = 'type or paste keywords, separated by commas',
   className,
+  autoFocus = false,
+  max,
+  onMaxExceeded,
 }: {
   value: string[];
   onChange: (next: string[]) => void;
   placeholder?: string;
   className?: string;
+  autoFocus?: boolean;
+  /** Hard cap on accepted keywords. Excess is dropped silently — wire
+   *  `onMaxExceeded` to show the upgrade modal / toast. */
+  max?: number;
+  /** Fired when an `add()` (typed entry or paste) tried to push the list
+   *  past `max`. Receives the count that would have landed. */
+  onMaxExceeded?: (attempted: number) => void;
 }) {
   const [text, setText] = useState('');
 
   function add(raw: string) {
     const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
     if (parts.length === 0) return;
-    const next = [...value];
-    for (const p of parts) if (!next.includes(p)) next.push(p);
+    const merged = [...value];
+    for (const p of parts) if (!merged.includes(p)) merged.push(p);
+    let next = merged;
+    if (typeof max === 'number' && max >= 0 && merged.length > max) {
+      next = merged.slice(0, max);
+      // Fire AFTER the slice so the caller sees what we actually accepted
+      // and can prompt the user to upgrade for the remainder.
+      onMaxExceeded?.(merged.length);
+    }
     onChange(next);
     setText('');
   }
@@ -44,6 +61,7 @@ export function KeywordInput({
       ))}
       <input
         className="min-w-[100px] flex-1 bg-transparent p-1 font-mono text-[13px] text-fg outline-none placeholder:text-fg-subtle"
+        autoFocus={autoFocus}
         value={text}
         onChange={(e) => {
           const v = e.target.value;

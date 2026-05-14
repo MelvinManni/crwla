@@ -1,12 +1,14 @@
-import { ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 import { CronPreset } from '@prisma/client';
 
 export const VALID_CRON: ReadonlyArray<CronPreset> = ['HOURLY', 'DAILY', 'WEEKLY', 'MANUAL'] as const;
 
 export class CreateSearchDto {
+  // Optional — when blank/missing the service derives a name from the
+  // keywords. Clients no longer need to make the user type one.
+  @IsOptional()
   @IsString()
-  @MinLength(1)
-  name!: string;
+  name?: string;
 
   @IsArray()
   @ArrayMinSize(1)

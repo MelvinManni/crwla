@@ -51,7 +51,23 @@ export function useCreateCrawl() {
       api.post<{ job: SearchView }>('/searches', input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['searches'] });
+      qc.invalidateQueries({ queryKey: ['searches', 'next-name'] });
     },
+  });
+}
+
+/**
+ * Preview the auto-name a blank-name create would land on. Used by the
+ * Start-Crawl dialog as the name-field placeholder so users see what they'll
+ * get if they don't type one. `enabled` lets the consumer fetch only while
+ * the dialog is open.
+ */
+export function useNextCrawlName(enabled = true) {
+  return useQuery({
+    queryKey: ['searches', 'next-name'] as const,
+    queryFn: () => api.get<{ name: string }>('/searches/next-name'),
+    enabled,
+    staleTime: 30_000,
   });
 }
 

@@ -39,6 +39,10 @@ function cronLabel(c: CronPreset): string {
   }
 }
 
+const AUTO_NAME_PREFIX = 'crwl';
+const AUTO_NAME_PAD = 3;
+const AUTO_NAME_RE = /^crwl(\d+)$/i;
+
 function timeWindowToCutoff(t: string | undefined): Date | null {
   switch (t) {
     case '24h':
@@ -162,10 +166,13 @@ export class SearchesService {
     // search row so a future plan change doesn't silently mutate what runs.
     const sources = await this.derivedSourcesForUser(userId);
 
+    const trimmedName = dto.name?.trim() ?? '';
+    const resolvedName =
+      trimmedName.length > 0 ? trimmedName : await this.nextAutoName(userId);
     const created = await this.prisma.search.create({
       data: {
         userId,
-        name: dto.name.trim(),
+        name: resolvedName,
         keywords: dto.keywords,
         locations: dto.locations ?? [],
         sources,
@@ -204,8 +211,35 @@ export class SearchesService {
     }
   }
 
+  /**
+   * Compute the next sequential auto-name for a user — "crwl001", "crwl002",
+   * etc. Strategy: pull every search whose name starts with the prefix
+   * (including soft-deleted ones, so a deleted/restored slot isn't recycled),
+   * keep the ones that strictly match `crwl<digits>`, take max + 1, and
+   * left-pad to {@link AUTO_NAME_PAD} digits. Padding floor is 3 — counts
+   * past 999 emit "crwl1000" without truncation.
+   *
+   * Concurrent creates can race to the same number; the dashboard tolerates
+   * duplicates and the chance is small in practice.
+   */
+  async nextAutoName(userId: string): Promise<string> {
+    const rows = await this.prisma.search.findMany({
+      where: { userId, name: { startsWith: AUTO_NAME_PREFIX, mode: 'insensitive' } },
+      select: { name: true },
+    });
+    let max = 0;
+    for (const { name } of rows) {
+      const m = AUTO_NAME_RE.exec(name);
+      if (!m) continue;
+      const n = Number.parseInt(m[1], 10);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+    const next = max + 1;
+    return `${AUTO_NAME_PREFIX}${String(next).padStart(AUTO_NAME_PAD, '0')}`;
+  }
+
   async update(userId: string, id: string, dto: UpdateSearchDto) {
-    const existing = await this.getOwned(userId, id);
+    await this.getOwned(userId, id);
     if (Array.isArray(dto.keywords)) {
       await this.entitlements.assertCanAddKeywords(userId, dto.keywords.length);
     }

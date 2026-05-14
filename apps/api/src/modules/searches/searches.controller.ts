@@ -51,6 +51,14 @@ export class SearchesController {
     return { job };
   }
 
+  // Preview the auto-name a blank-name create would land on (e.g. "crwl001").
+  // Routed before `/:id` so Nest doesn't pick up "next-name" as a search id.
+  @Get('next-name')
+  async nextName(@CurrentUser() user: AuthenticatedUser) {
+    const name = await this.searches.nextAutoName(user.id);
+    return { name };
+  }
+
   @Get(':id')
   async get(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     const job = await this.searches.getOne(user.id, id);

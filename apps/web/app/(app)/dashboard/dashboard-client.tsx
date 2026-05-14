@@ -17,6 +17,8 @@ import { KeywordChip } from '@/components/keyword-chip';
 import { StatusPill } from '@/components/status-pill';
 import { SearchCard } from '@/components/search-card';
 import { DeleteCrawlButton } from '@/components/delete-crawl-button';
+import { StartCrawlButton } from '@/components/start-crawl-button';
+import { Search } from 'lucide-react';
 import { ListFilterBar, type ListFilters } from '@/components/list-filter-bar';
 import { buildListSearch, type ListParams } from '@/lib/list-state';
 import { exportCsv, exportXls, type ExportColumn } from '@/lib/export';
@@ -171,6 +173,29 @@ export function DashboardClient({
 
   const isFiltered =
     listParams.q !== '' || listParams.keyword !== '' || listParams.time !== 'all';
+
+  // First-run hero: replace the entire list/grid surface with a CTA-led
+  // empty state when the user genuinely has zero crawls. The filtered
+  // empty state is handled inline inside the table/grid below.
+  if (total === 0 && !isFiltered) {
+    return (
+      <div className="rounded-[10px] border border-dashed border-border bg-bg-elev px-6 py-16 text-center">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-border bg-bg-sunk">
+          <Search className="h-5 w-5 text-fg-subtle" />
+        </div>
+        <h2 className="mt-4 text-[18px] font-semibold tracking-[-0.01em]">
+          No crawls yet
+        </h2>
+        <p className="mx-auto mt-1.5 max-w-[360px] text-[13px] leading-relaxed text-fg-muted">
+          Track keywords across news, social, forums, and blogs. Start your
+          first crawl to begin collecting results on a schedule.
+        </p>
+        <div className="mt-5 flex justify-center">
+          <StartCrawlButton label="Start your first crawl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

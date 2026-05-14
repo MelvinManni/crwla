@@ -26,7 +26,8 @@ import { Info } from "lucide-react";
 import { KeywordInput } from "@/components/keyword-input";
 import { CronPicker } from "@/components/cron-picker";
 import { useEntitlements } from "@/components/billing/entitlements-provider";
-import { useCreateCrawl } from "@/lib/queries/crawls";
+import { useUpgradeModal } from "@/components/billing/upgrade-modal";
+import { useCreateCrawl, useNextCrawlName } from "@/lib/queries/crawls";
 import type { CronPreset } from "@/lib/types";
 import TooltipGroup from "./tooltip-group";
 
@@ -96,7 +97,21 @@ function StartCrawlDialog({
 }) {
   const router = useRouter();
   const { ent } = useEntitlements();
+  const { showLimit } = useUpgradeModal();
   const createCrawl = useCreateCrawl();
+  const nextName = useNextCrawlName(open);
+  const keywordCap = ent?.limits.keywordsPerSearch;
+
+  function onKeywordCapExceeded(attempted: number) {
+    if (typeof keywordCap !== 'number') return;
+    const planName = ent?.plan.name ?? 'your plan';
+    showLimit({
+      reason: `${planName} allows ${keywordCap} keyword${
+        keywordCap === 1 ? '' : 's'
+      } per crawl — ${attempted - keywordCap} dropped. Upgrade to add more.`,
+      recommendedTier: 'Pro',
+    });
+  }
   const [name, setName] = useState("");
   const [keywords, setKeywords] = useState<string[]>([]);
   const [cron, setCron] = useState<CronPreset>("DAILY");
@@ -130,7 +145,6 @@ function StartCrawlDialog({
 
   function submit() {
     setError(null);
-    if (!name.trim()) return setError("Name is required.");
     if (keywords.length === 0) return setError("Add at least one keyword.");
     createCrawl.mutate(
       { name: name.trim(), keywords, cron, filterPrompt, strict },
@@ -156,19 +170,21 @@ function StartCrawlDialog({
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
           <div className="space-y-1.5">
-            <Label htmlFor="crawl-name">Name</Label>
+            <Label htmlFor="crawl-name">
+              Name{' '}
+              <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
             <Input
               id="crawl-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. AI Funding Tracker"
-              autoFocus
+              placeholder={nextName.data?.name ?? 'crwl001'}
             />
           </div>
 
           <div className="space-y-1.5">
             <Label>Keywords</Label>
-            <KeywordInput value={keywords} onChange={setKeywords} />
+            <KeywordInput value={keywords} onChange={setKeywords} autoFocus />
           </div>
 
           <div className="space-y-1.5">
