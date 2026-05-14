@@ -40,7 +40,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Searches',
+          title: 'Crawls',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="search" color={color} size={size - 2} />
           ),
@@ -71,6 +71,15 @@ export default function TabsLayout() {
           href: showAdmin ? '/(tabs)/admin' : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" color={color} size={size - 2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" color={color} size={size - 2} />
           ),
         }}
       />

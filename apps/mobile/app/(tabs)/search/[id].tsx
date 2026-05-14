@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -9,6 +10,7 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -18,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../../lib/api';
 import { colors, fonts, radii } from '../../../lib/theme';
 import { ViewToggle, type ViewMode } from '../../../components/view-toggle';
+import { pickThumbnail, siteFavicon, type Thumb as ThumbKind } from '../../../lib/thumbnails';
 
 type Result = {
   id: string;
@@ -31,7 +34,7 @@ type Result = {
 };
 
 type ResultsPage = {
-  job: { id: string; name: string; keywords: string[]; lastRun: string };
+  job: { id: string; name: string; keywords: string[]; lastRun: string; strict: boolean };
   results: Result[];
   items?: Result[];
   total: number;
@@ -55,6 +58,7 @@ export default function SearchResults() {
   const [filter, setFilter] = useState('');
   const [filtering, setFiltering] = useState(false);
   const [view, setView] = useState<ViewMode>('list');
+  const [strictSaving, setStrictSaving] = useState(false);
 
   const fetchPage = useCallback(
     async (p: number, replace: boolean) => {
@@ -104,6 +108,28 @@ export default function SearchResults() {
     } finally {
       setRunning(false);
     }
+  }
+
+  async function toggleStrict(next: boolean) {
+    if (!id || !job) return;
+    const prev = job.strict;
+    setJob({ ...job, strict: next });
+    setStrictSaving(true);
+    try {
+      await api.patch(`/searches/${id}`, { strict: next });
+    } catch (e) {
+      setJob({ ...job, strict: prev });
+      Alert.alert('Could not update', (e as Error).message);
+    } finally {
+      setStrictSaving(false);
+    }
+  }
+
+  function explainStrict() {
+    Alert.alert(
+      'Strict mode',
+      'When on, this crawl only keeps results that contain ALL of your keywords (in the title or snippet). When off, a result matching any single keyword is kept. Strict mode is applied on the next run.',
+    );
   }
 
   async function applyFilter() {
@@ -163,6 +189,30 @@ export default function SearchResults() {
                   <Text style={s.kwText}>{k}</Text>
                 </View>
               ))}
+            </View>
+            <View style={s.strictRow}>
+              <View style={s.strictLabelWrap}>
+                <Text style={s.strictLabel}>Strict mode</Text>
+                <Pressable
+                  onPress={explainStrict}
+                  hitSlop={8}
+                  accessibilityLabel="What is strict mode?"
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={15}
+                    color={colors.fgMuted}
+                  />
+                </Pressable>
+              </View>
+              <Switch
+                value={job.strict}
+                onValueChange={toggleStrict}
+                disabled={strictSaving}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor={colors.accentFg}
+              />
             </View>
             <View style={s.headerActions}>
               <Pressable
@@ -240,35 +290,61 @@ export default function SearchResults() {
 }
 
 function Thumb({
-  url,
+  item,
   width,
   height,
   style,
 }: {
-  url: string | null;
+  item: { image: string | null; url: string };
   width: number;
   height: number;
   style?: any;
 }) {
-  if (url) {
+  // Downgrade on image-load failure: cover → site favicon → striped box.
+  const initial = pickThumbnail(item);
+  const [thumb, setThumb] = useState<ThumbKind>(initial);
+
+  if (thumb.kind === 'none') {
     return (
-      <Image
-        source={{ uri: url }}
-        style={[
-          {
-            width,
-            height,
-            borderRadius: radii.control,
-            backgroundColor: colors.bgSunk,
-          },
-          style,
-        ]}
-      />
+      <View style={[{ width, height }, s.thumb, style]}>
+        <Text style={s.thumbLabel}>IMG</Text>
+      </View>
     );
   }
+
+  const isSite = thumb.kind === 'site';
   return (
-    <View style={[{ width, height }, s.thumb, style]}>
-      <Text style={s.thumbLabel}>IMG</Text>
+    <View
+      style={[
+        {
+          width,
+          height,
+          borderRadius: radii.control,
+          backgroundColor: colors.bgSunk,
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        },
+        style,
+      ]}
+    >
+      <Image
+        source={{ uri: thumb.src }}
+        onError={() => {
+          if (thumb.kind === 'cover') {
+            const fav = siteFavicon(item.url);
+            setThumb(fav ? { kind: 'site', src: fav } : { kind: 'none' });
+          } else {
+            setThumb({ kind: 'none' });
+          }
+        }}
+        style={
+          isSite
+            ? { width: Math.min(40, width - 16), height: Math.min(40, height - 16) }
+            : { width: '100%', height: '100%' }
+        }
+        resizeMode={isSite ? 'contain' : 'cover'}
+      />
     </View>
   );
 }
@@ -276,7 +352,7 @@ function Thumb({
 function ListResultRow({ item }: { item: Result }) {
   return (
     <Pressable style={s.resultCard} onPress={() => Linking.openURL(item.url)}>
-      <Thumb url={item.image} width={76} height={76} />
+      <Thumb item={item} width={76} height={76} />
       <View style={{ flex: 1, gap: 5, minWidth: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text style={s.resultSource}>{item.source.toUpperCase()}</Text>
@@ -306,16 +382,7 @@ function GridResultCard({ item }: { item: Result }) {
       style={s.gridResultCard}
       onPress={() => Linking.openURL(item.url)}
     >
-      {item.image ? (
-        <Image
-          source={{ uri: item.image }}
-          style={[s.gridThumb, { backgroundColor: colors.bgSunk }]}
-        />
-      ) : (
-        <View style={s.gridThumb}>
-          <Text style={s.thumbLabel}>IMG</Text>
-        </View>
-      )}
+      <Thumb item={item} width={140} height={90} style={s.gridThumb} />
       <Text style={s.gridSource}>{item.source.toUpperCase()}</Text>
       <Text style={s.gridResultTitle} numberOfLines={3}>
         {item.title}
@@ -345,6 +412,22 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 6,
+  },
+  strictRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  strictLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  strictLabel: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 13,
+    color: colors.fg,
   },
   runBtn: {
     flexDirection: 'row',

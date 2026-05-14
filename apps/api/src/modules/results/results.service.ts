@@ -133,6 +133,7 @@ export class ResultsService {
         name: search.name,
         cron: search.cron,
         filterPrompt: search.filterPrompt ?? '',
+        strict: search.strict,
         status: search.status,
         keywords: search.keywords,
         lastRun: relTime(search.lastRunAt) ?? 'never',

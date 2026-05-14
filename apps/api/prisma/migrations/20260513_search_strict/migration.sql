@@ -1,0 +1,1 @@
+ALTER TABLE "search" ADD COLUMN "strict" BOOLEAN NOT NULL DEFAULT false;

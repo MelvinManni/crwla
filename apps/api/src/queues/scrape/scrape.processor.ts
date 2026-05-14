@@ -81,12 +81,23 @@ export class ScrapeProcessor extends WorkerHost {
         (a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0),
       );
 
+      // Strict mode: a result must contain every keyword in its title or
+      // snippet (case-insensitive). Per-source AND-queries aren't supported
+      // uniformly across crawlers, so the intersection is enforced here.
+      let kept = items;
+      if (search.strict && search.keywords.length > 1) {
+        const needles = search.keywords.map((k) => k.toLowerCase());
+        kept = items.filter((it) => {
+          const hay = `${it.title ?? ''} ${it.snippet ?? ''}`.toLowerCase();
+          return needles.every((n) => hay.includes(n));
+        });
+      }
+
       // Apply LLM filter only when configured — heuristic at scrape time is
       // too risky (we'd drop data we can't recover). View-time filter handles
       // it otherwise.
-      let kept = items;
       if (search.filterPrompt && this.config.get<string>('ANTHROPIC_API_KEY')) {
-        const out = await this.filter.apply({ prompt: search.filterPrompt, items });
+        const out = await this.filter.apply({ prompt: search.filterPrompt, items: kept });
         kept = out.items;
       }
 

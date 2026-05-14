@@ -39,7 +39,7 @@ export default function Dashboard() {
   const { user, signout } = useAuth();
   const [view, setView] = useState<ViewMode>('list');
 
-  const { items, refreshing, loadingMore, hasMore, refresh, loadMore } =
+  const { items, total, refreshing, loadingMore, hasMore, refresh, loadMore } =
     usePaginatedList<SearchView, ApiPage>({
       path: '/searches',
       pageSize: 20,
@@ -52,9 +52,9 @@ export default function Dashboard() {
     <View style={s.container}>
       <View style={s.appTop}>
         <View style={{ flex: 1 }}>
-          <Text style={s.h2}>Scrape Yard</Text>
+          <Text style={s.h2}>Crawls</Text>
           <Text style={s.topSub}>
-            {items.length} JOB{items.length === 1 ? '' : 'S'} · {user?.email}
+            {total} CRAWL{total === 1 ? '' : 'S'} · {user?.email}
           </Text>
         </View>
         <ViewToggle value={view} onChange={setView} />
@@ -88,8 +88,8 @@ export default function Dashboard() {
               <View style={s.emptyIcon}>
                 <Ionicons name="folder-open-outline" size={20} color={colors.fgMuted} />
               </View>
-              <Text style={s.emptyTitle}>No jobs yet</Text>
-              <Text style={s.emptyText}>Tap the + to create your first scrape job.</Text>
+              <Text style={s.emptyTitle}>No crawls yet</Text>
+              <Text style={s.emptyText}>Tap the + to start your first crawl.</Text>
             </View>
           ) : null
         }
@@ -99,7 +99,7 @@ export default function Dashboard() {
               <ActivityIndicator color={colors.fg} />
             </View>
           ) : !hasMore && items.length > 0 ? (
-            <Text style={s.footerEnd}>END · {items.length} TOTAL</Text>
+            <Text style={s.footerEnd}>END · {total} TOTAL</Text>
           ) : null
         }
       />

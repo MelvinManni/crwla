@@ -1,4 +1,4 @@
-import { ArrayMinSize, ArrayUnique, IsArray, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { CronPreset } from '@prisma/client';
 
 export const VALID_CRON: ReadonlyArray<CronPreset> = ['HOURLY', 'DAILY', 'WEEKLY', 'MANUAL'] as const;
@@ -25,6 +25,10 @@ export class CreateSearchDto {
   @IsArray()
   @IsString({ each: true })
   locations?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  strict?: boolean;
 
   // `sources` is no longer accepted from the client — the API derives it
   // from the user's active plan + admin denylist at create time. Existing

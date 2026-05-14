@@ -29,6 +29,7 @@ export function usePaginatedList<TItem, TRaw extends Partial<Page<TItem>> = Page
   const { path, pageSize = 20, getItems, enabled = true } = opts;
   const [items, setItems] = useState<TItem[]>([]);
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -48,6 +49,7 @@ export function usePaginatedList<TItem, TRaw extends Partial<Page<TItem>> = Page
         setItems((prev) => (replace ? next : [...prev, ...next]));
         setPage(p);
         setHasMore(Boolean(data.hasMore));
+        if (typeof data.total === 'number') setTotal(data.total);
       } catch (e) {
         setError((e as Error).message);
       } finally {
@@ -82,5 +84,5 @@ export function usePaginatedList<TItem, TRaw extends Partial<Page<TItem>> = Page
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, enabled]);
 
-  return { items, setItems, page, hasMore, refreshing, loadingMore, error, refresh, loadMore };
+  return { items, setItems, page, total, hasMore, refreshing, loadingMore, error, refresh, loadMore };
 }

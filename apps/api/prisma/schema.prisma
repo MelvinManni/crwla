@@ -170,6 +170,7 @@ model Search {
   sources      String[] // google_news, bing, twitter, blogs…
   cron         CronPreset   @default(DAILY)
   filterPrompt String?      @map("filter_prompt")
+  strict       Boolean      @default(false)
   status       SearchStatus @default(RUNNING)
   lastRunAt    DateTime?    @map("last_run_at")
   nextRunAt    DateTime?    @map("next_run_at")

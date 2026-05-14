@@ -1,4 +1,4 @@
-import { ArrayMinSize, ArrayUnique, IsArray, IsIn, IsOptional, IsString } from 'class-validator';
+import { ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 import { CronPreset, SearchStatus } from '@prisma/client';
 import { VALID_CRON } from './create-search.dto';
 
@@ -21,5 +21,7 @@ export class UpdateSearchDto {
   @IsOptional() @IsIn(UPDATABLE_STATUSES as readonly string[]) status?: SearchStatus;
 
   @IsOptional() @IsArray() @IsString({ each: true }) locations?: string[];
+
+  @IsOptional() @IsBoolean() strict?: boolean;
   // `sources` is server-derived from the active plan; not accepted from clients.
 }

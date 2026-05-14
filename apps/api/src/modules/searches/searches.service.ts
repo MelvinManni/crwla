@@ -67,6 +67,7 @@ function shape(s: Search & { _count?: { results: number } }) {
     cronLabel: cronLabel(s.cron),
     status: s.status,
     filterPrompt: s.filterPrompt ?? '',
+    strict: s.strict,
     lastRun: relTime(s.lastRunAt) ?? 'never',
     nextRun:
       s.status === SearchStatus.PAUSED
@@ -170,6 +171,7 @@ export class SearchesService {
         sources,
         cron: dto.cron,
         filterPrompt: dto.filterPrompt ?? null,
+        strict: dto.strict ?? false,
         status: SearchStatus.RUNNING,
       },
     });
@@ -215,6 +217,7 @@ export class SearchesService {
     if (Array.isArray(dto.keywords)) data.keywords = dto.keywords;
     if (Array.isArray(dto.locations)) data.locations = dto.locations;
     if (typeof dto.filterPrompt === 'string') data.filterPrompt = dto.filterPrompt;
+    if (typeof dto.strict === 'boolean') data.strict = dto.strict;
     if (dto.cron) data.cron = dto.cron;
     if (dto.status) data.status = dto.status;
     if (Object.keys(data).length) {
