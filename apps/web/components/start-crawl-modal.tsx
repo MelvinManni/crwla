@@ -19,7 +19,15 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
 import { KeywordInput } from '@/components/keyword-input';
 import { CronPicker } from '@/components/cron-picker';
 import { useEntitlements } from '@/components/billing/entitlements-provider';
@@ -95,6 +103,7 @@ function StartCrawlDialog({
   const [cron, setCron] = useState<CronPreset>('DAILY');
   const [cronTouched, setCronTouched] = useState(false);
   const [filterPrompt, setFilterPrompt] = useState('');
+  const [strict, setStrict] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Reset form whenever the dialog opens.
@@ -104,6 +113,7 @@ function StartCrawlDialog({
       setKeywords([]);
       setCronTouched(false);
       setFilterPrompt('');
+      setStrict(false);
       setError(null);
       createCrawl.reset();
     }
@@ -124,7 +134,7 @@ function StartCrawlDialog({
     if (!name.trim()) return setError('Name is required.');
     if (keywords.length === 0) return setError('Add at least one keyword.');
     createCrawl.mutate(
-      { name: name.trim(), keywords, cron, filterPrompt },
+      { name: name.trim(), keywords, cron, filterPrompt, strict },
       {
         onSuccess: (out) => {
           onOpenChange(false);
@@ -137,7 +147,7 @@ function StartCrawlDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex w-[calc(100vw-40px)] max-w-[540px] max-h-[calc(100vh-40px)] flex-col gap-0 p-0 overflow-y-auto rounded-lg">
+      <DialogContent className="flex w-[calc(100vw-40px)] max-w-[540px] max-h-[90svh] flex-col gap-0 p-0 overflow-y-auto rounded-lg">
         <DialogHeader className="shrink-0 border-b border-border bg-background px-6 py-4">
           <DialogTitle>Start a crawl</DialogTitle>
           <DialogDescription>
@@ -186,6 +196,31 @@ function StartCrawlDialog({
               rows={3}
             />
           </div>
+
+          <TooltipProvider>
+            <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2.5">
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="crawl-strict" className="cursor-pointer">
+                  Strict mode
+                </Label>
+                <Tooltip>
+                  <TooltipTrigger
+                    type="button"
+                    aria-label="What is strict mode?"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Info size={14} aria-hidden />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[240px] text-left leading-snug">
+                    Only keeps results that contain <strong>all</strong> of your keywords
+                    in the title or snippet. When off, a result matching any single
+                    keyword is kept.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Switch id="crawl-strict" checked={strict} onCheckedChange={setStrict} />
+            </div>
+          </TooltipProvider>
 
           {allowed.length > 0 && (
             <p className="font-mono text-[11px] text-fg-subtle">

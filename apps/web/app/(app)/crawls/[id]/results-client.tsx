@@ -40,6 +40,7 @@ type Initial = {
     name: string;
     cron: string;
     filterPrompt: string;
+    strict: boolean;
     status: string;
     keywords: string[];
     lastRun: string;

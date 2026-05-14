@@ -41,6 +41,7 @@ export type CreateCrawlInput = {
   keywords: string[];
   cron: CronPreset;
   filterPrompt?: string;
+  strict?: boolean;
 };
 
 export function useCreateCrawl() {
@@ -60,6 +61,7 @@ export type UpdateCrawlInput = {
   keywords?: string[];
   cron?: CronPreset;
   filterPrompt?: string;
+  strict?: boolean;
   status?: 'RUNNING' | 'PAUSED';
 };
 
@@ -112,6 +114,7 @@ export type CrawlResultsResponse = {
     name: string;
     cron: string;
     filterPrompt: string;
+    strict: boolean;
     status: string;
     keywords: string[];
     lastRun: string;

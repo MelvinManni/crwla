@@ -23,6 +23,7 @@ export type SearchView = {
   cronLabel: string;
   status: SearchStatus;
   filterPrompt: string;
+  strict: boolean;
   lastRun: string;
   nextRun: string;
   results: number;
