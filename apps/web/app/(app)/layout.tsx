@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ToasterProvider } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { UpgradeModalProvider } from "@/components/billing/upgrade-modal";
 import { EntitlementsProvider } from "@/components/billing/entitlements-provider";
 import { StartCrawlProvider } from "@/components/start-crawl-modal";
@@ -25,7 +24,6 @@ export default async function AppLayout({
 
   return (
     <ToasterProvider>
-      <SonnerToaster />
       <UpgradeModalProvider>
         <EntitlementsProvider>
           <StartCrawlProvider>

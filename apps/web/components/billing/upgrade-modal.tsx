@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   createContext,
@@ -7,10 +7,10 @@ import {
   useEffect,
   useState,
   type ReactNode,
-} from 'react';
-import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+} from "react";
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
 type Ctx = {
   /**
@@ -33,10 +33,10 @@ const UpgradeContext = createContext<Ctx | null>(null);
 
 export function UpgradeModalProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState<string>('');
+  const [reason, setReason] = useState<string>("");
   const [recommended, setRecommended] = useState<string | null>(null);
 
-  const showLimit = useCallback<Ctx['showLimit']>((input) => {
+  const showLimit = useCallback<Ctx["showLimit"]>((input) => {
     setReason(input.reason);
     setRecommended(input.recommendedTier ?? null);
     setOpen(true);
@@ -57,7 +57,7 @@ export function UpgradeModalProvider({ children }: { children: ReactNode }) {
     <UpgradeContext.Provider value={{ showLimit }}>
       {children}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <div className="mb-2 grid h-10 w-10 place-items-center rounded-lg bg-bg-sunk">
               <Sparkles className="h-5 w-5" />
@@ -74,7 +74,10 @@ export function UpgradeModalProvider({ children }: { children: ReactNode }) {
             <Button variant="outline" onClick={() => setOpen(false)}>
               Not now
             </Button>
-            <Button render={<Link href="/billing" />} onClick={() => setOpen(false)}>
+            <Button
+              render={<Link href="/billing" />}
+              onClick={() => setOpen(false)}
+            >
               View plans
             </Button>
           </DialogFooter>
@@ -86,15 +89,20 @@ export function UpgradeModalProvider({ children }: { children: ReactNode }) {
 
 export function useUpgradeModal(): Ctx {
   const ctx = useContext(UpgradeContext);
-  if (!ctx) throw new Error('useUpgradeModal must be used inside <UpgradeModalProvider>');
+  if (!ctx)
+    throw new Error(
+      "useUpgradeModal must be used inside <UpgradeModalProvider>",
+    );
   return ctx;
 }
 
 /** Top-level event so non-React callers (lib/api.ts) can fire the modal. */
-export const UPGRADE_EVENT = 'crwla:plan-limit-exceeded';
+export const UPGRADE_EVENT = "crwla:plan-limit-exceeded";
 export type UpgradeEventDetail = { reason: string; recommendedTier?: string };
 
 export function dispatchUpgrade(detail: UpgradeEventDetail) {
-  if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent<UpgradeEventDetail>(UPGRADE_EVENT, { detail }));
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<UpgradeEventDetail>(UPGRADE_EVENT, { detail }),
+  );
 }

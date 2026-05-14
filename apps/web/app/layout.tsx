@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { QueryProvider } from "@/lib/queries/client";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "CRWLA",
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-background font-sans antialiased">
         <QueryProvider>
           {children}
+          <SonnerToaster />
         </QueryProvider>
       </body>
     </html>
