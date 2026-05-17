@@ -17,6 +17,7 @@ import { EntitlementsService } from './entitlements.service';
 import { PlansService } from './plans.service';
 import { PolarService } from './polar.service';
 import { ADDON_CATALOG } from './plans.catalog';
+import { ActivityService } from '../activity/activity.service';
 
 /**
  * Public surface used by the controller. Polar webhook handling lives at
@@ -32,6 +33,7 @@ export class BillingService {
     private readonly polar: PolarService,
     private readonly entitlements: EntitlementsService,
     private readonly config: ConfigService,
+    private readonly activity: ActivityService,
   ) {}
 
   // ---------- Read ----------------------------------------------------
@@ -118,6 +120,12 @@ export class BillingService {
       },
     });
 
+    this.activity.log({
+      userId: input.userId,
+      type: 'billing.checkout_started',
+      metadata: { tier: input.tier, interval: input.interval },
+    });
+
     return { url: checkout.url, id: checkout.id };
   }
 
@@ -130,6 +138,7 @@ export class BillingService {
     const session = sub?.polarCustomerId
       ? await this.polar.createCustomerPortal({ customerId: sub.polarCustomerId })
       : await this.polar.createCustomerPortal({ externalCustomerId: userId });
+    this.activity.log({ userId, type: 'billing.portal_opened' });
     return { url: (session as { customerPortalUrl?: string }).customerPortalUrl ?? null };
   }
 
@@ -147,6 +156,7 @@ export class BillingService {
       where: { id: sub.id },
       data: { cancelAtPeriodEnd: true },
     });
+    this.activity.log({ userId, type: 'billing.cancel_requested' });
     return { ok: true };
   }
 
@@ -400,6 +410,11 @@ export class BillingService {
       targetInterval: interval,
       scheduledFor: new Date(periodEnd),
     });
+    this.activity.log({
+      userId,
+      type: 'billing.downgrade_scheduled',
+      metadata: { targetTier, scheduledFor: periodEnd },
+    });
     return { scheduled: true, scheduledFor: periodEnd, targetTier };
   }
 
@@ -441,6 +456,9 @@ export class BillingService {
       where: { userId, status: 'PENDING' },
       data: { status: 'CANCELED', canceledAt: new Date() },
     });
+    if (out.count > 0) {
+      this.activity.log({ userId, type: 'billing.downgrade_canceled' });
+    }
     return { ok: true, canceled: out.count };
   }
 

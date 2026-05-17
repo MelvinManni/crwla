@@ -124,8 +124,28 @@ model User {
   subscription     Subscription?
   scheduledChanges ScheduledPlanChange[]
   onboardingStates OnboardingState[]
+  activities       UserActivity[]
 
   @@map("user")
+}
+
+/// Append-only log of user-driven actions. Records both what happened
+/// (type, e.g. `search.created`) and a short pointer (`targetId`) so an
+/// admin can drill into the affected row. `metadata` is free-form JSON for
+/// small extras (keyword count, run duration, etc.) — keep payloads small,
+/// this table grows quickly.
+model UserActivity {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  targetId  String?  @map("target_id")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([type, createdAt(sort: Desc)])
+  @@map("user_activity")
 }
 
 /// Per-user onboarding tracker. One row per (user, flow). Admins are
@@ -204,6 +224,15 @@ model Search {
   lastRunAt    DateTime?    @map("last_run_at")
   nextRunAt    DateTime?    @map("next_run_at")
   lastError    String?      @map("last_error")
+  /// When true and `shareSlug` is set, the search's results are readable
+  /// at /p/<slug> by anyone. The owner can toggle this off without losing
+  /// the slug — the public page short-circuits to a limited-access view
+  /// when the flag is false.
+  publicAccess Boolean      @default(false) @map("public_access")
+  /// Generated lazily the first time the owner clicks "Share". Unique per
+  /// search; we don't recycle slugs so old links permanently 404 once the
+  /// row is soft-deleted.
+  shareSlug    String?      @unique @map("share_slug")
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
   deletedAt    DateTime?    @map("deleted_at")

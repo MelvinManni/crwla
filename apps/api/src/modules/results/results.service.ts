@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { FilterService, FilterItem } from '../filter/filter.service';
+import { ActivityService } from '../activity/activity.service';
 
 function relTime(t: Date | null | undefined): string | null {
   if (!t) return null;
@@ -34,6 +35,7 @@ export class ResultsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly filter: FilterService,
+    private readonly activity: ActivityService,
   ) {}
 
   private async ownedSearch(userId: string, searchId: string) {
@@ -178,6 +180,12 @@ export class ResultsService {
     if (row.searchId !== searchId) {
       throw new NotFoundException('not found');
     }
+    this.activity.log({
+      userId,
+      type: favorite ? 'result.favorited' : 'result.unfavorited',
+      targetId: row.id,
+      metadata: { searchId },
+    });
     return { id: row.id, favorite: row.favoritedAt !== null };
   }
 

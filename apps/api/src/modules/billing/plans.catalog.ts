@@ -32,6 +32,8 @@ export type PlanLimits = {
   apiAccess: boolean;
   customEmailDomain: boolean;
   scheduledExports: boolean;
+  /** Public share links for crawl results — Pro+ only. */
+  resultSharing: boolean;
   teamSeats: number; // 1 = solo, 5 = Business default, etc.
   prioritySupport: boolean;
   uptimeSLA: boolean;
@@ -86,6 +88,7 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       apiAccess: false,
       customEmailDomain: false,
       scheduledExports: false,
+      resultSharing: false,
       teamSeats: 1,
       prioritySupport: false,
       uptimeSLA: false,
@@ -126,6 +129,7 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       apiAccess: false,
       customEmailDomain: false,
       scheduledExports: false,
+      resultSharing: false,
       teamSeats: 1,
       prioritySupport: false,
       uptimeSLA: false,
@@ -168,6 +172,7 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       apiAccess: false,
       customEmailDomain: false,
       scheduledExports: false,
+      resultSharing: false,
       teamSeats: 1,
       prioritySupport: false,
       uptimeSLA: false,
@@ -210,6 +215,7 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       apiAccess: false,
       customEmailDomain: false,
       scheduledExports: false,
+      resultSharing: true,
       teamSeats: 1,
       prioritySupport: true,
       uptimeSLA: false,
@@ -256,6 +262,7 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       apiAccess: true,
       customEmailDomain: true,
       scheduledExports: true,
+      resultSharing: true,
       teamSeats: 5,
       prioritySupport: true,
       uptimeSLA: true,

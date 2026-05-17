@@ -10,6 +10,7 @@ export const qk = {
   admin: {
     requests: () => ['admin', 'requests'] as const,
     users: () => ['admin', 'users'] as const,
+    userDetail: (id: string) => ['admin', 'users', 'detail', id] as const,
     billingPlans: () => ['admin', 'billing', 'plans'] as const,
   },
   billing: { me: () => ['billing', 'me'] as const, plans: () => ['billing', 'plans'] as const },

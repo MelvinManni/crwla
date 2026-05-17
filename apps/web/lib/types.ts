@@ -75,6 +75,48 @@ export type UserAdminView = {
   disabledSourceCategories: string[];
 };
 
+export type MemberSubscriptionView = {
+  status: string;
+  interval: 'MONTH' | 'YEAR';
+  planTier: string;
+  planName: string;
+  priceMonthlyCents: number;
+  priceYearlyCents: number;
+  seats: number;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  canceledAt: string | null;
+  createdAt: string;
+};
+
+export type MemberActivityStats = {
+  total: number;
+  windowDays: number;
+  byType: Array<{ type: string; label: string; count: number }>;
+  daily: Array<{ day: string; count: number }>;
+  recent: Array<{
+    id: string;
+    type: string;
+    label: string;
+    targetId: string | null;
+    metadata: unknown;
+    at: number;
+  }>;
+  types: ReadonlyArray<string>;
+};
+
+export type MemberDetailResponse = {
+  user: UserAdminView & {
+    lastActiveAt: string | null;
+    createdAt: string;
+    searchCount: number;
+    alertCount: number;
+  };
+  subscription: MemberSubscriptionView | null;
+  stats: MemberActivityStats;
+};
+
 export type SourceCategory = 'news' | 'social' | 'forums' | 'blogs';
 
 export type SourceMeta = {

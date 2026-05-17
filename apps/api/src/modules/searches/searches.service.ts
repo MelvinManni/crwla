@@ -6,6 +6,7 @@ import { SourceRegistry } from '../scraper/sources/source.registry';
 import { DEFAULT_SOURCES } from '../scraper/sources/source.types';
 import { EntitlementsService } from '../billing/entitlements.service';
 import { OnboardingService } from '../onboarding/onboarding.service';
+import { ActivityService } from '../activity/activity.service';
 import { CreateSearchDto } from './dto/create-search.dto';
 import { UpdateSearchDto } from './dto/update-search.dto';
 
@@ -95,6 +96,7 @@ export class SearchesService {
     private readonly registry: SourceRegistry,
     private readonly entitlements: EntitlementsService,
     private readonly onboarding: OnboardingService,
+    private readonly activity: ActivityService,
   ) {}
 
   async listForUser(
@@ -188,6 +190,16 @@ export class SearchesService {
     // Trigger the post-create walkthrough on the first crawl. Idempotent
     // and admin-skipping; safe to call after every create.
     await this.onboarding.ensureFirstCrawl(userId, role);
+    this.activity.log({
+      userId,
+      type: 'search.created',
+      targetId: created.id,
+      metadata: {
+        name: created.name,
+        keywordCount: created.keywords.length,
+        cron: created.cron,
+      },
+    });
     return shape({ ...created, _count: { results: 0 } });
   }
 
@@ -270,6 +282,12 @@ export class SearchesService {
         await this.scrapeQueue.scheduleRepeatable(updated.id, updated.cron);
       }
     }
+    this.activity.log({
+      userId,
+      type: 'search.updated',
+      targetId: updated.id,
+      metadata: { changed: Object.keys(data) },
+    });
     return shape(updated);
   }
 
@@ -282,6 +300,12 @@ export class SearchesService {
     await this.prisma.search.update({
       where: { id: existing.id },
       data: { deletedAt: new Date() },
+    });
+    this.activity.log({
+      userId,
+      type: 'search.deleted',
+      targetId: existing.id,
+      metadata: { name: existing.name },
     });
     return { ok: true };
   }
@@ -304,6 +328,12 @@ export class SearchesService {
     // Consume one manual-run from the user's monthly quota (or a paid run
     // pack). Throws ForbiddenException with PLAN_LIMIT_EXCEEDED on quota.
     await this.entitlements.consumeManualRun(userId);
+    this.activity.log({
+      userId,
+      type: 'search.run_now',
+      targetId: existing.id,
+      metadata: { name: existing.name },
+    });
     return this.scrapeQueue.runNow(existing.id);
   }
 }

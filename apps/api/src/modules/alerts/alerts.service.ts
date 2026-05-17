@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { AlertFrequency, Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { EntitlementsService } from '../billing/entitlements.service';
+import { ActivityService } from '../activity/activity.service';
 
 export type CreateAlertInput = {
   searchId?: string | null;
@@ -16,6 +17,7 @@ export class AlertsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly entitlements: EntitlementsService,
+    private readonly activity: ActivityService,
   ) {}
 
   async listForUser(
@@ -45,7 +47,7 @@ export class AlertsService {
 
   async create(userId: string, input: CreateAlertInput) {
     await this.entitlements.assertCanCreateAlert(userId);
-    return this.prisma.alert.create({
+    const created = await this.prisma.alert.create({
       data: {
         userId,
         searchId: input.searchId ?? null,
@@ -55,18 +57,28 @@ export class AlertsService {
         frequency: input.frequency ?? AlertFrequency.DAILY,
       },
     });
+    this.activity.log({
+      userId,
+      type: 'alert.created',
+      targetId: created.id,
+      metadata: { keyword: created.keyword, frequency: created.frequency },
+    });
+    return created;
   }
 
   async patch(userId: string, id: string, data: Prisma.AlertUpdateInput) {
     const owned = await this.prisma.alert.findFirst({ where: { id, userId } });
     if (!owned) throw new NotFoundException('not found');
-    return this.prisma.alert.update({ where: { id }, data });
+    const updated = await this.prisma.alert.update({ where: { id }, data });
+    this.activity.log({ userId, type: 'alert.updated', targetId: id });
+    return updated;
   }
 
   async remove(userId: string, id: string) {
     const owned = await this.prisma.alert.findFirst({ where: { id, userId } });
     if (!owned) throw new NotFoundException('not found');
     await this.prisma.alert.delete({ where: { id } });
+    this.activity.log({ userId, type: 'alert.deleted', targetId: id });
     return { ok: true };
   }
 }

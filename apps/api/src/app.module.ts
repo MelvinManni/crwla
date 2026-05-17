@@ -17,6 +17,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { FilterModule } from './modules/filter/filter.module';
 import { ContactModule } from './modules/contact/contact.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { ActivityModule } from './modules/activity/activity.module';
 import { QueuesModule } from './queues/queues.module';
 import { TasksModule } from './tasks/tasks.module';
 
@@ -40,6 +41,7 @@ import { TasksModule } from './tasks/tasks.module';
     FilterModule,
     ContactModule,
     OnboardingModule,
+    ActivityModule,
     QueuesModule,
     TasksModule,
   ],

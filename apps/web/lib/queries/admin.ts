@@ -3,7 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { qk } from './keys';
-import type { AccessRequestView, UserAdminView } from '@/lib/types';
+import type {
+  AccessRequestView,
+  MemberDetailResponse,
+  UserAdminView,
+} from '@/lib/types';
 import type { AdminPlan } from '@/app/(app)/admin/billing/admin-billing-client';
 
 // ---------- Access requests ----------
@@ -48,6 +52,15 @@ export function useAdminUsers(opts?: { initialData?: { users: UserAdminView[] } 
     queryFn: () => api.get<{ users: UserAdminView[] }>('/admin/users'),
     initialData: opts?.initialData,
     staleTime: 30_000,
+  });
+}
+
+export function useAdminUserDetail(id: string | null) {
+  return useQuery({
+    queryKey: id ? qk.admin.userDetail(id) : ['admin', 'users', 'detail', 'null'],
+    queryFn: () => api.get<MemberDetailResponse>(`/admin/users/${id}`),
+    enabled: !!id,
+    staleTime: 15_000,
   });
 }
 

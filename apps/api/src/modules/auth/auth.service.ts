@@ -12,6 +12,7 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { Role, User } from '@prisma/client';
 import { BillingService } from '../billing/billing.service';
+import { ActivityService } from '../activity/activity.service';
 
 export type SessionUser = {
   id: string;
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly billing: BillingService,
+    private readonly activity: ActivityService,
   ) {}
 
   hashPassword(plain: string): string {
@@ -59,6 +61,7 @@ export class AuthService {
     // Fire-and-forget so a slow Polar API call never delays login; the
     // method swallows its own errors and rate-limits per-user internally.
     this.reconcileBilling(user.id);
+    this.activity.log({ userId: user.id, type: 'auth.signin' });
     return {
       token,
       user: {
@@ -149,6 +152,11 @@ export class AuthService {
     }
 
     const updated = await this.prisma.user.update({ where: { id: userId }, data });
+    this.activity.log({
+      userId,
+      type: 'auth.profile_updated',
+      metadata: { changed: Object.keys(data) },
+    });
     return {
       id: updated.id,
       email: updated.email,
@@ -171,6 +179,7 @@ export class AuthService {
       where: { id: userId },
       data: { active: false, deletedAt: new Date() },
     });
+    this.activity.log({ userId, type: 'auth.account_deleted' });
   }
 
   private reconcileBilling(userId: string): void {

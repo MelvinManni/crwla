@@ -46,6 +46,11 @@ export class UsersController {
     return this.users.create(dto);
   }
 
+  @Get(':id')
+  detail(@Param('id') id: string) {
+    return this.users.detail(id);
+  }
+
   @Patch(':id')
   patch(@Param('id') id: string, @Body() dto: PatchUserDto) {
     return this.users.patch(id, dto);

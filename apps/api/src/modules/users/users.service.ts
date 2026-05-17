@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { ActivityService } from '../activity/activity.service';
 import { Role } from '@prisma/client';
 
 function relTime(t: Date | null | undefined): string {
@@ -20,6 +21,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auth: AuthService,
+    private readonly activity: ActivityService,
   ) {}
 
   async list() {
@@ -54,6 +56,61 @@ export class UsersService {
       },
     });
     return { ok: true, id: created.id };
+  }
+
+  async detail(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        subscription: { include: { plan: true } },
+        _count: {
+          select: {
+            searches: { where: { deletedAt: null } },
+            alerts: true,
+          },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('not found');
+
+    const stats = await this.activity.statsForUser(id, 30);
+
+    const sub = user.subscription;
+    const subscription = sub
+      ? {
+          status: sub.status,
+          interval: sub.interval,
+          planTier: sub.plan.tier,
+          planName: sub.plan.name,
+          priceMonthlyCents: sub.plan.priceMonthlyCents,
+          priceYearlyCents: sub.plan.priceYearlyCents,
+          seats: sub.seats,
+          currentPeriodStart: sub.currentPeriodStart?.toISOString() ?? null,
+          currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
+          cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+          canceledAt: sub.canceledAt?.toISOString() ?? null,
+          createdAt: sub.createdAt.toISOString(),
+        }
+      : null;
+
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        team: user.team ?? '—',
+        role: user.role === Role.ADMIN ? 'Admin' : 'Member',
+        last: relTime(user.lastActiveAt ?? user.createdAt),
+        lastActiveAt: user.lastActiveAt?.toISOString() ?? null,
+        createdAt: user.createdAt.toISOString(),
+        active: user.active,
+        disabledSourceCategories: user.disabledSourceCategories,
+        searchCount: user._count.searches,
+        alertCount: user._count.alerts,
+      },
+      subscription,
+      stats,
+    };
   }
 
   async patch(
