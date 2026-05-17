@@ -38,3 +38,14 @@ export async function requireAdmin(): Promise<SessionUser> {
   if (user.role !== 'ADMIN') redirect('/dashboard');
   return user;
 }
+
+/**
+ * Inverse of requireSession — used by the (auth) group layout so an
+ * already-signed-in visitor can't land on /signin or /request-access.
+ * They have to sign out first (or let the cookie expire) before the
+ * auth routes become reachable again.
+ */
+export async function redirectIfSession(): Promise<void> {
+  const user = await getSession();
+  if (user) redirect('/dashboard');
+}
