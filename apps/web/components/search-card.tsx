@@ -1,17 +1,36 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { KeywordChip } from '@/components/keyword-chip';
 import { StatusPill } from '@/components/status-pill';
 import { DeleteCrawlButton } from '@/components/delete-crawl-button';
 import type { SearchView } from '@/lib/types';
 
 export function SearchCard({ search }: { search: SearchView }) {
+  const router = useRouter();
+  const href = `/crawls/${search.id}` as const;
+
+  // Belt-and-suspenders prefetch: Next App Router prefetches Links in
+  // viewport already, but firing prefetch() on pointer-enter warms the
+  // RSC cache for the moment the cursor crosses the card — so by the
+  // time the click lands, the next page is essentially instant.
+  function warm() {
+    router.prefetch(href);
+  }
+
   return (
-    <div className="group relative rounded-[10px] border border-border bg-bg-elev p-4 transition-colors hover:border-border-strong">
-      {/* Full-card click target. Stretched link pattern so interactive
-          siblings (delete button) can live outside the anchor without
-          nesting interactives. */}
+    <div
+      className="group relative rounded-[10px] border border-border bg-bg-elev p-4 transition-colors hover:border-border-strong"
+      onPointerEnter={warm}
+      onFocus={warm}
+    >
+      {/* Full-card click target. Stretched-link pattern so the delete
+          button can live as a sibling without nesting an <a> around a
+          <button>. */}
       <Link
-        href={`/crawls/${search.id}`}
+        href={href}
+        prefetch
         aria-label={`Open ${search.name}`}
         className="absolute inset-0 z-0 rounded-[10px]"
       />
@@ -23,10 +42,11 @@ export function SearchCard({ search }: { search: SearchView }) {
             {search.results} results
           </p>
         </div>
+        {/* Delete icon is always visible — no hover gymnastics. The
+            button itself stops propagation so clicking it doesn't fire
+            the stretched-link navigation. */}
         <div className="flex items-center gap-1">
-          <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-            <DeleteCrawlButton id={search.id} name={search.name} />
-          </span>
+          <DeleteCrawlButton id={search.id} name={search.name} />
           <StatusPill status={search.status} />
         </div>
       </div>
