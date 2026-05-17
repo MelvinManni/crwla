@@ -98,6 +98,12 @@ Each invariant has: **rule**, **why**, **verify**, **repair**.
 - **Verify**: `cd apps/api && npm run worker:dev` starts and logs "CRWLA worker online".
 - **Repair**: If the file is missing, recreate it from §"queue-worker.ts" in this file. If it crashes on missing modules, ensure all queue modules are listed in `AppModule.imports`.
 
+### I-9. Every web page has an OG image component
+- **Rule**: For every `apps/web/app/.../page.tsx` (any route group, including dynamic `[param]` routes), a sibling `opengraph-image.tsx` (or `.ts`/`.jsx`/`.png`/`.jpg`/`.jpeg`) exists. The `.tsx` variant imports a component from `apps/web/components/metadata/<Name>Og.tsx` and renders it via `renderOg()` from `apps/web/lib/og/render.tsx`.
+- **Why**: Link-previews on Slack, X, iMessage, Linear, and GitHub fall back to a generic / broken image when the OG meta is missing. The metadata folder + Satori render path keeps the cost cheap: dynamic OGs fetch only the small slot payload they need; static OGs are cached by Next at build time.
+- **Verify**: `./.claude/hooks/check-og-images.sh` exits 0. The hook also runs as a `Stop` hook (`.claude/settings.local.json`) so a Claude session that adds a `page.tsx` cannot end without its OG component.
+- **Repair**: Add a `<RouteName>Og.tsx` to `apps/web/components/metadata/` (see that folder's `README.md` for the convention and `DESIGN_PROMPT.md` for the visual brief), then add an `opengraph-image.tsx` next to the offending `page.tsx`. Dynamic routes should fetch only the slot fields they need server-side and pass them as props.
+
 ---
 
 ## 4. Boot-time self-check
@@ -155,6 +161,7 @@ When you add new functionality, these checklists keep the harness self-consisten
 2. The `(app)/layout.tsx` server component reads the `crwla_token` cookie and 302s to `/signin` if absent — never re-implement the auth check inline.
 3. Use shadcn primitives in `apps/web/components/ui/`. Do not reach into Tailwind utility classes for layout that has a primitive.
 4. Add the route to `apps/web/middleware.ts` matcher if the auth gate is the only thing standing in front of it.
+5. **OG image (I-9):** add `apps/web/components/metadata/<RouteName>Og.tsx` and a sibling `opengraph-image.tsx` that calls `renderOg(<RouteNameOg {...slots} />)`. For dynamic routes, fetch only the small slot payload (≤90 chars per text field) inside `opengraph-image.tsx` — don't reuse the full page loader. The Stop hook at `.claude/hooks/check-og-images.sh` enforces this; see `apps/web/components/metadata/README.md` for the convention and `DESIGN_PROMPT.md` for the visual brief.
 
 ### 5f. New mobile screen
 1. Add under `apps/mobile/app/(auth)` or `apps/mobile/app/(tabs)`.
@@ -262,7 +269,7 @@ npm run dev
 
 # 3. web (separate terminal)
 cd apps/web
-cp .env.local.example .env.local
+cp .env.local.example .env.local 
 npm install
 npm run dev
 #   → http://localhost:3000
