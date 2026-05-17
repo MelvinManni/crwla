@@ -211,9 +211,9 @@ export function BillingClient({
               </div>
               <ul className="mt-4 flex-1 space-y-1.5">
                 {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-[12px] text-fg">
+                  <li key={f.key} className="flex items-start gap-2 text-[12px] text-fg">
                     <Check className="mt-0.5 h-3 w-3 shrink-0 text-fg-muted" />
-                    <span>{f}</span>
+                    <span>{f.label}</span>
                   </li>
                 ))}
               </ul>

@@ -4,6 +4,13 @@ import { api } from '@/lib/api';
 import { qk } from './keys';
 import type { Entitlements } from '@/components/billing/entitlements-provider';
 
+export type PlanFeatureView = {
+  key: string;
+  label: string;
+  included: true;
+  sortOrder: number;
+};
+
 export type PlanView = {
   id: string;
   tier: 'FREE' | 'STARTER' | 'BASIC' | 'PRO' | 'BUSINESS';
@@ -11,7 +18,7 @@ export type PlanView = {
   description: string | null;
   priceMonthlyCents: number;
   priceYearlyCents: number;
-  features: string[];
+  features: PlanFeatureView[];
   hasPolar: boolean;
 };
 

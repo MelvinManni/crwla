@@ -358,10 +358,11 @@ model Plan {
   /// product id; Polar uses the product's current price automatically.
   polarPriceMonthlyId   String?       @map("polar_price_monthly_id")
   polarPriceYearlyId    String?       @map("polar_price_yearly_id")
-  /// JSON snapshot of limits + features for the FE. See `PlanLimits` in the
-  /// catalogue file for the canonical shape.
+  /// JSON snapshot of limits for the FE. The canonical shape lives in
+  /// `PlanLimits` (plans.catalog.ts). All feature bullets on the
+  /// pricing / billing / admin cards are *derived* from this object —
+  /// flip a flag here, the bullet appears/disappears everywhere.
   limits              Json
-  features            Json             @default("[]")
   /// false = archived; hidden from pickers, Polar product archived too.
   active              Boolean          @default(true)
   sortOrder           Int              @default(0) @map("sort_order")

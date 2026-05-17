@@ -332,14 +332,14 @@ function PlanCard({
       <ul className="flex flex-col gap-2.5 mt-1">
         {plan.features.map((f) => (
           <li
-            key={f}
+            key={f.key}
             className="grid grid-cols-[14px_1fr] gap-3 text-[13.5px] leading-[1.5] text-mk-dark-ink-2"
           >
             <span
               aria-hidden="true"
               className="mt-[7px] w-1.5 h-1.5 rounded-full bg-mk-accent"
             />
-            <span>{f}</span>
+            <span>{f.label}</span>
           </li>
         ))}
       </ul>

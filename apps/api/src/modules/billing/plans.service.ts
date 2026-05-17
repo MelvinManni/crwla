@@ -21,6 +21,11 @@ import {
  * there's something for the admin to edit. After that, `plans.catalog.ts` is
  * just a reference template — admin changes win.
  *
+ * Features shown on pricing / billing / admin cards are *derived* from
+ * `Plan.limits` via `deriveFeatures()` in the catalog file. There is no
+ * separate features table — the limits JSON is the single source of
+ * truth so the admin only ever edits one thing.
+ *
  * Polar product/price ids are provisioned automatically on save via
  * `PolarService.syncPlan()`. No env-supplied ids needed.
  */
@@ -42,9 +47,7 @@ export class PlansService implements OnModuleInit {
     const count = await this.prisma.plan.count();
     if (count > 0) return;
     for (const def of PLAN_CATALOG) {
-      await this.prisma.plan.create({
-        data: defToCreate(def),
-      });
+      await this.prisma.plan.create({ data: defToCreate(def) });
     }
     this.logger.log(`seeded ${PLAN_CATALOG.length} plans (empty DB bootstrap)`);
   }
@@ -105,7 +108,6 @@ export class PlansService implements OnModuleInit {
     return created;
   }
 
-  /** Patch any subset of plan fields. Triggers Polar sync unless suppressed. */
   /**
    * Patch any subset of plan fields. Triggers a Polar sync (unless
    * suppressed) which:
@@ -134,10 +136,11 @@ export class PlansService implements OnModuleInit {
     if (typeof input.sortOrder === 'number') data.sortOrder = input.sortOrder;
     if (typeof input.active === 'boolean') data.active = input.active;
     if (input.limits) data.limits = input.limits as Prisma.InputJsonValue;
-    if (input.features)
-      data.features = input.features as unknown as Prisma.InputJsonValue;
 
-    const updated = await this.prisma.plan.update({ where: { id }, data });
+    const updated =
+      Object.keys(data).length === 0
+        ? existing
+        : await this.prisma.plan.update({ where: { id }, data });
 
     const shouldSync = input.polarSync !== false && existing.tier !== 'FREE';
     if (!shouldSync) return updated;
@@ -249,8 +252,6 @@ export class PlansService implements OnModuleInit {
       sortOrder: input.sortOrder ?? 0,
       active: input.active ?? true,
       limits: (input.limits ?? planByTier(input.tier).limits) as Prisma.InputJsonValue,
-      features: (input.features ??
-        planByTier(input.tier).features) as unknown as Prisma.InputJsonValue,
     };
   }
 }
@@ -264,7 +265,6 @@ export type AdminPlanInput = {
   sortOrder?: number;
   active?: boolean;
   limits?: PlanLimits;
-  features?: string[];
 };
 
 function defToCreate(def: PlanDefinition): Prisma.PlanUncheckedCreateInput {
@@ -276,7 +276,6 @@ function defToCreate(def: PlanDefinition): Prisma.PlanUncheckedCreateInput {
     priceYearlyCents: def.priceYearlyCents,
     sortOrder: def.sortOrder,
     limits: def.limits as unknown as Prisma.InputJsonValue,
-    features: def.features as unknown as Prisma.InputJsonValue,
     active: true,
   };
 }

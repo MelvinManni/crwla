@@ -123,7 +123,6 @@ export type SavePlanInput = {
   description: string;
   priceMonthlyCents: number;
   priceYearlyCents: number;
-  features: string[];
   limits: Record<string, unknown>;
 };
 

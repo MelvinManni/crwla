@@ -28,6 +28,15 @@ export type PlanLimits = {
   teamSeats: number;
   prioritySupport: boolean;
   uptimeSLA: boolean;
+  // Marketing-bullet flags — drive what bullets render, no runtime gate.
+  smartFiltering: boolean;
+  keywordGenerator: boolean;
+  repeatedWordIdentification: boolean;
+  locationSearch: boolean;
+  sharedSearches: boolean;
+  rbac: boolean;
+  emailSupport: boolean;
+  communitySupport: boolean;
 };
 
 export type Entitlements = {

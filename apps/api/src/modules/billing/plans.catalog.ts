@@ -37,6 +37,19 @@ export type PlanLimits = {
   teamSeats: number; // 1 = solo, 5 = Business default, etc.
   prioritySupport: boolean;
   uptimeSLA: boolean;
+
+  // Marketing-bullet flags. These don't gate runtime behavior today —
+  // they exist so the admin can toggle whether the bullet appears on
+  // the pricing / billing card. If any of these later need to gate a
+  // feature, add the assert in EntitlementsService.
+  smartFiltering: boolean;
+  keywordGenerator: boolean;
+  repeatedWordIdentification: boolean;
+  locationSearch: boolean;
+  sharedSearches: boolean;
+  rbac: boolean;
+  emailSupport: boolean;
+  communitySupport: boolean;
 };
 
 export type PlanDefinition = {
@@ -45,8 +58,6 @@ export type PlanDefinition = {
   description: string;
   priceMonthlyCents: number;
   priceYearlyCents: number;
-  /** Marketing-style bullet list shown on the pricing page. */
-  features: ReadonlyArray<string>;
   limits: PlanLimits;
   sortOrder: number;
 };
@@ -62,15 +73,6 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
     priceMonthlyCents: 0,
     priceYearlyCents: 0,
     sortOrder: 0,
-    features: [
-      '1 saved search',
-      '3 keywords per search',
-      '10 manual runs / month',
-      '3 email alerts',
-      'Core search engines',
-      '7-day result history',
-      'Community support',
-    ],
     limits: {
       savedSearches: 1,
       keywordsPerSearch: 3,
@@ -92,6 +94,14 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       teamSeats: 1,
       prioritySupport: false,
       uptimeSLA: false,
+      smartFiltering: false,
+      keywordGenerator: false,
+      repeatedWordIdentification: false,
+      locationSearch: false,
+      sharedSearches: false,
+      rbac: false,
+      emailSupport: false,
+      communitySupport: true,
     },
   },
   {
@@ -101,17 +111,6 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
     priceMonthlyCents: 500,
     priceYearlyCents: 4800,
     sortOrder: 10,
-    features: [
-      '5 saved searches',
-      '8 keywords per search',
-      'Weekly & monthly scheduling',
-      '20 scheduled runs per search / month',
-      '5 email alerts',
-      'Bulk keyword input (30 at once)',
-      'Smart filtering & duplicate detection',
-      '14-day result history',
-      'CSV export',
-    ],
     limits: {
       savedSearches: 5,
       keywordsPerSearch: 8,
@@ -133,6 +132,14 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       teamSeats: 1,
       prioritySupport: false,
       uptimeSLA: false,
+      smartFiltering: true,
+      keywordGenerator: false,
+      repeatedWordIdentification: false,
+      locationSearch: false,
+      sharedSearches: false,
+      rbac: false,
+      emailSupport: false,
+      communitySupport: false,
     },
   },
   {
@@ -142,19 +149,6 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
     priceMonthlyCents: 1200,
     priceYearlyCents: 12000,
     sortOrder: 20,
-    features: [
-      '15 saved searches',
-      '12 keywords per search',
-      'Daily, weekly, monthly scheduling',
-      '50 scheduled runs per search / month',
-      '15 email alerts',
-      'All sources (search engines, social, blogs)',
-      'Bulk keyword input (100 at once)',
-      'Location-based searches',
-      '30-day result history',
-      'CSV + Excel export',
-      'Email support',
-    ],
     limits: {
       savedSearches: 15,
       keywordsPerSearch: 12,
@@ -176,6 +170,14 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       teamSeats: 1,
       prioritySupport: false,
       uptimeSLA: false,
+      smartFiltering: true,
+      keywordGenerator: false,
+      repeatedWordIdentification: false,
+      locationSearch: true,
+      sharedSearches: false,
+      rbac: false,
+      emailSupport: true,
+      communitySupport: false,
     },
   },
   {
@@ -185,19 +187,6 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
     priceMonthlyCents: 3500,
     priceYearlyCents: 35000,
     sortOrder: 30,
-    features: [
-      '40 saved searches',
-      '20 keywords per search',
-      'Daily, weekly, monthly + custom scheduling',
-      '100 scheduled runs per search / month',
-      '40 alerts (email + SMS, 50 SMS / month)',
-      'Keyword generator (AI-suggested)',
-      'Repeated word identification',
-      '90-day result history',
-      'All export formats',
-      'Webhooks (Slack, Zapier, custom URLs)',
-      'Priority email support',
-    ],
     limits: {
       savedSearches: 40,
       keywordsPerSearch: 20,
@@ -219,6 +208,14 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       teamSeats: 1,
       prioritySupport: true,
       uptimeSLA: false,
+      smartFiltering: true,
+      keywordGenerator: true,
+      repeatedWordIdentification: true,
+      locationSearch: true,
+      sharedSearches: false,
+      rbac: false,
+      emailSupport: false,
+      communitySupport: false,
     },
   },
   {
@@ -229,22 +226,6 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
     priceMonthlyCents: 14900,
     priceYearlyCents: 149000,
     sortOrder: 40,
-    features: [
-      'Everything in Pro',
-      '100 saved searches',
-      '25 keywords per search',
-      'Up to 5 team members (then $15/seat/month)',
-      'Shared searches & alerts',
-      'Role-based permissions',
-      'Custom email domain for alerts',
-      'WhatsApp alerts (300 SMS+WhatsApp combined / month)',
-      'Unlimited scheduled runs',
-      'Unlimited result history',
-      'Scheduled exports',
-      'Webhooks + early API access (coming soon)',
-      'Priority chat + email support',
-      '99.9% uptime SLA',
-    ],
     limits: {
       savedSearches: 100,
       keywordsPerSearch: 25,
@@ -266,6 +247,14 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       teamSeats: 5,
       prioritySupport: true,
       uptimeSLA: true,
+      smartFiltering: true,
+      keywordGenerator: true,
+      repeatedWordIdentification: true,
+      locationSearch: true,
+      sharedSearches: true,
+      rbac: true,
+      emailSupport: false,
+      communitySupport: false,
     },
   },
 ];
@@ -286,4 +275,171 @@ export function planByTier(tier: PlanTier): PlanDefinition {
   const p = PLAN_CATALOG.find((p) => p.tier === tier);
   if (!p) throw new Error(`unknown plan tier: ${tier}`);
   return p;
+}
+
+// ---------------------------------------------------------------------
+// Derived features
+//
+// Every bullet on a pricing / billing / admin card is computed here from
+// `PlanLimits`. There is no separate features table or column — flip a
+// flag in `limits`, the bullet appears/disappears everywhere.
+//
+// Numeric limits emit quantity bullets ("40 saved searches" / "Unlimited
+// result history"). Array limits collapse to summary phrases ("All
+// sources", "CSV + Excel export"). Boolean flags emit a static string
+// when true. Anything excluded is dropped from the output entirely — we
+// don't render struck-through rows.
+//
+// MIRROR: `apps/web/app/(app)/admin/billing/edit-plan-drawer.tsx`
+// contains `deriveFeaturesLocal()`, a copy of this function so the
+// admin Preview pane stays in sync without an API round-trip. If you
+// change the rules here, update that file too (and vice versa).
+
+export type DerivedFeature = {
+  /** Stable key — used as the React key on the FE. */
+  key: string;
+  label: string;
+  /** Always true in the returned list (excluded bullets are filtered). */
+  included: true;
+  sortOrder: number;
+};
+
+const CRON_DISPLAY: Record<string, string> = {
+  HOURLY: 'hourly',
+  DAILY: 'daily',
+  WEEKLY: 'weekly',
+  CUSTOM: 'custom',
+};
+
+function num(n: number): string {
+  return n < 0 ? 'Unlimited' : n.toString();
+}
+
+function cronBullet(cron: PlanLimits['cron']): string | null {
+  // Excludes MANUAL — every plan implicitly supports manual runs.
+  const named = cron
+    .filter((c) => c !== 'MANUAL')
+    .map((c) => CRON_DISPLAY[c])
+    .filter(Boolean);
+  if (named.length === 0) return null; // manual-only plan: skip the row
+  return `${capitalize(named.join(', '))} scheduling`;
+}
+
+function sourcesBullet(cats: PlanLimits['allowedSourceCategories']): string | null {
+  if (cats.length === 0) return null;
+  if (cats.length >= 4) return 'All sources (news, social, forums, blogs)';
+  return `Sources: ${cats.join(', ')}`;
+}
+
+function exportsBullet(fmts: PlanLimits['exportFormats']): string | null {
+  if (fmts.length === 0) return null;
+  if (fmts.length >= 4) return 'All export formats';
+  return `${fmts.map((f) => f.toUpperCase()).join(' + ')} export`;
+}
+
+function alertsBullet(limits: PlanLimits): string | null {
+  const parts: string[] = [];
+  if (limits.emailAlerts !== 0) parts.push(`${num(limits.emailAlerts)} email`);
+  if (limits.smsAlertsPerMonth > 0) parts.push(`${limits.smsAlertsPerMonth} SMS`);
+  if (limits.whatsappAlertsPerMonth > 0) {
+    parts.push(`${limits.whatsappAlertsPerMonth} WhatsApp`);
+  }
+  if (parts.length === 0) return null;
+  return `${parts.join(' + ')} alerts`;
+}
+
+function capitalize(s: string): string {
+  return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
+}
+
+/**
+ * Compute the ordered list of feature bullets for a plan. Pass in
+ * `limits` (the FREE-tier defaults are used if any field is missing).
+ */
+export function deriveFeatures(limits: PlanLimits): DerivedFeature[] {
+  const out: DerivedFeature[] = [];
+  let order = 0;
+  const push = (key: string, label: string | null) => {
+    if (label) {
+      out.push({ key, label, included: true, sortOrder: order++ });
+    }
+  };
+
+  // --- Quantitative limits ---
+  push(
+    'savedSearches',
+    limits.savedSearches === 0
+      ? null
+      : `${num(limits.savedSearches)} saved ${limits.savedSearches === 1 ? 'search' : 'searches'}`,
+  );
+  push(
+    'keywordsPerSearch',
+    limits.keywordsPerSearch === 0
+      ? null
+      : `${num(limits.keywordsPerSearch)} keywords per search`,
+  );
+  push('cron', cronBullet(limits.cron));
+  push(
+    'scheduledRunsPerSearchPerMonth',
+    limits.scheduledRunsPerSearchPerMonth === 0
+      ? null
+      : limits.scheduledRunsPerSearchPerMonth < 0
+        ? 'Unlimited scheduled runs'
+        : `${limits.scheduledRunsPerSearchPerMonth} scheduled runs / search / month`,
+  );
+  push(
+    'manualRunsPerMonth',
+    limits.manualRunsPerMonth === 0
+      ? null
+      : limits.manualRunsPerMonth < 0
+        ? 'Unlimited manual runs'
+        : `${limits.manualRunsPerMonth} manual runs / month`,
+  );
+  push('alerts', alertsBullet(limits));
+  push(
+    'bulkKeywordImport',
+    limits.bulkKeywordImport > 0
+      ? `Bulk keyword input (${limits.bulkKeywordImport} at once)`
+      : null,
+  );
+  push('allowedSourceCategories', sourcesBullet(limits.allowedSourceCategories));
+  push(
+    'resultHistoryDays',
+    limits.resultHistoryDays === 0
+      ? null
+      : limits.resultHistoryDays < 0
+        ? 'Unlimited result history'
+        : `${limits.resultHistoryDays}-day result history`,
+  );
+  push('exportFormats', exportsBullet(limits.exportFormats));
+  push(
+    'teamSeats',
+    limits.teamSeats > 1 ? `Up to ${limits.teamSeats} team members` : null,
+  );
+
+  // --- Boolean feature flags ---
+  push('locationSearch', limits.locationSearch ? 'Location-based searches' : null);
+  push('smartFiltering', limits.smartFiltering ? 'Smart filtering & duplicate detection' : null);
+  push('keywordGenerator', limits.keywordGenerator ? 'Keyword generator (AI-suggested)' : null);
+  push('repeatedWordIdentification', limits.repeatedWordIdentification ? 'Repeated word identification' : null);
+  push('sharedSearches', limits.sharedSearches ? 'Shared searches & alerts' : null);
+  push('rbac', limits.rbac ? 'Role-based permissions' : null);
+  push('customEmailDomain', limits.customEmailDomain ? 'Custom email domain for alerts' : null);
+  push('webhooks', limits.webhooks ? 'Webhooks (Slack, Zapier, custom URLs)' : null);
+  push('apiAccess', limits.apiAccess ? 'API access' : null);
+  push('scheduledExports', limits.scheduledExports ? 'Scheduled exports' : null);
+  push('resultSharing', limits.resultSharing ? 'Public result sharing (/p/<slug>)' : null);
+  push(
+    'support',
+    limits.prioritySupport
+      ? 'Priority email support'
+      : limits.emailSupport
+        ? 'Email support'
+        : limits.communitySupport
+          ? 'Community support'
+          : null,
+  );
+  push('uptimeSLA', limits.uptimeSLA ? '99.9% uptime SLA' : null);
+
+  return out;
 }

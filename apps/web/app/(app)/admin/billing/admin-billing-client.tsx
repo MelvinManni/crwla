@@ -13,6 +13,14 @@ import {
 } from '@/lib/queries/admin';
 import { EditPlanDrawer } from './edit-plan-drawer';
 
+/** Derived feature bullet — produced by deriveFeatures() on the API. */
+export type AdminPlanFeature = {
+  key: string;
+  label: string;
+  included: true;
+  sortOrder: number;
+};
+
 export type AdminPlan = {
   id: string;
   tier: 'FREE' | 'STARTER' | 'BASIC' | 'PRO' | 'BUSINESS';
@@ -24,7 +32,7 @@ export type AdminPlan = {
   polarPriceMonthlyId: string | null;
   polarPriceYearlyId: string | null;
   limits: Record<string, unknown>;
-  features: string[];
+  features: AdminPlanFeature[];
   active: boolean;
   sortOrder: number;
 };

@@ -16,7 +16,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { EntitlementsService } from './entitlements.service';
 import { PlansService } from './plans.service';
 import { PolarService } from './polar.service';
-import { ADDON_CATALOG } from './plans.catalog';
+import { ADDON_CATALOG, deriveFeatures, type PlanLimits } from './plans.catalog';
 import { ActivityService } from '../activity/activity.service';
 
 /**
@@ -47,7 +47,10 @@ export class BillingService {
       description: p.description,
       priceMonthlyCents: p.priceMonthlyCents,
       priceYearlyCents: p.priceYearlyCents,
-      features: p.features,
+      // Features are derived from `limits` on the server so every
+      // consumer (marketing pricing page, in-app billing, admin editor)
+      // sees the same list without duplicating the rules.
+      features: deriveFeatures(p.limits as unknown as PlanLimits),
       limits: p.limits,
       // Don't expose the polar price ids; FE doesn't need them.
       hasPolar:
