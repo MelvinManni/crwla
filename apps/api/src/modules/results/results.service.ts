@@ -147,6 +147,11 @@ export class ResultsService {
         status: search.status,
         keywords: search.keywords,
         lastRun: relTime(search.lastRunAt) ?? 'never',
+        // Surfaced so the detail-page toolbar can render a "Copy share
+        // link" button without a second round-trip. Slug stays null
+        // until the owner enables sharing for the first time.
+        publicAccess: search.publicAccess,
+        shareSlug: search.shareSlug,
       },
       // legacy and canonical keys
       results,

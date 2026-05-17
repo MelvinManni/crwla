@@ -38,7 +38,10 @@ export function SharedResultsView({ data }: { data: SharedSearchView }) {
       ) : (
         <ul className="space-y-3">
           {results.map((r) => (
-            <li key={r.id}>
+            // r.url is unique per shared crawl (DB enforces searchId +
+            // urlHash uniqueness) so it's a stable React key without
+            // having to expose an internal id.
+            <li key={r.url}>
               <Card className="p-4">
                 <div className="flex items-start gap-3">
                   {r.image && (

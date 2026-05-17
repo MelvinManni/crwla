@@ -13,9 +13,25 @@ function relTime(t: Date | null | undefined): string | null {
   return `${d}d ago`;
 }
 
-export type SharedView = {
+/**
+ * Shape of the response served by the public `/api/p/:slug` endpoint.
+ *
+ * Intentionally narrower than the authenticated `SearchView` /
+ * `ResultView`:
+ *   - No internal CUIDs (search id, result id) — anonymous viewers don't
+ *     need them and exposing them tempts cross-endpoint enumeration.
+ *   - No `userId`, `fetchedAt`, `score`, `metadata`, `hidden`,
+ *     `favoritedAt`, or anything else stored on the Result / Search
+ *     rows that isn't user-visible content.
+ *   - `ownerName` is included because the owner opted into a public
+ *     share (signal of attribution). Keep it to a display name only —
+ *     never expose email, team, or role.
+ *
+ * Anything added to this type must be reviewed for "would I be okay if
+ * a stranger scraped this off `/p/<slug>`?".
+ */
+export type PublicSharedView = {
   search: {
-    id: string;
     slug: string;
     name: string;
     keywords: string[];
@@ -23,7 +39,6 @@ export type SharedView = {
     lastRun: string;
   };
   results: Array<{
-    id: string;
     title: string;
     url: string;
     snippet: string | null;
@@ -38,11 +53,16 @@ export type SharedView = {
   hasMore: boolean;
 };
 
+// Re-exported under the older name so existing imports keep working
+// after the rename. Drop after the next release cycle.
+export type SharedView = PublicSharedView;
+
 /**
- * Public read-side for /p/<slug>. Returns null when the slug is unknown
- * OR the owner has flipped `public_access` off — controllers should
- * render the same "limited access" view in both cases so we don't leak
- * the existence of revoked slugs.
+ * Public read-side for /p/<slug>. The only intentional public surface
+ * for crawl data — everything else lives behind JwtAuthGuard. Returns
+ * null when the slug is unknown OR the owner has flipped
+ * `public_access` off; controllers render the same "limited access"
+ * view in both cases so we don't leak the existence of revoked slugs.
  */
 @Injectable()
 export class ShareService {
@@ -51,10 +71,20 @@ export class ShareService {
   async getBySlug(
     slug: string,
     pagination: { page?: number; pageSize?: number } = {},
-  ): Promise<SharedView | null> {
+  ): Promise<PublicSharedView | null> {
+    // `select` (not `include`) so Prisma only pulls the columns we
+    // actually expose. If a future schema change adds a column we
+    // mean to keep private, it won't accidentally land in the
+    // response via a wildcard.
     const search = await this.prisma.search.findFirst({
       where: { shareSlug: slug, publicAccess: true, deletedAt: null },
-      include: { user: { select: { name: true } } },
+      select: {
+        id: true,
+        name: true,
+        keywords: true,
+        lastRunAt: true,
+        user: { select: { name: true } },
+      },
     });
     if (!search) return null;
 
@@ -74,12 +104,23 @@ export class ShareService {
         ],
         skip: offset,
         take: pageSize,
+        // Same defensive `select` — internal columns (urlHash,
+        // titleHash, metadata, score, favoritedAt, hidden, fetchedAt,
+        // searchVector, runId, searchId) stay server-side.
+        select: {
+          title: true,
+          url: true,
+          snippet: true,
+          source: true,
+          imageUrl: true,
+          publishedAt: true,
+          fetchedAt: true,
+        },
       }),
     ]);
 
     return {
       search: {
-        id: search.id,
         slug,
         name: search.name,
         keywords: search.keywords,
@@ -87,7 +128,6 @@ export class ShareService {
         lastRun: relTime(search.lastRunAt) ?? 'never',
       },
       results: rows.map((r) => ({
-        id: r.id,
         title: r.title,
         url: r.url,
         snippet: r.snippet,

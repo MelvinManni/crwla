@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   ExternalLink,
   Heart,
+  Link2,
   Pencil,
   Play,
   RefreshCw,
@@ -25,9 +26,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   crawlResultsQuery,
   useApplyCrawlFilter,
+  useEnableCrawlShare,
   useRunCrawl,
   useToggleResultFavorite,
 } from '@/lib/queries/crawls';
+import { useEntitlements } from '@/components/billing/entitlements-provider';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
 import type { ResultView } from '@/lib/types';
@@ -42,6 +45,8 @@ type Initial = {
     status: string;
     keywords: string[];
     lastRun: string;
+    publicAccess: boolean;
+    shareSlug: string | null;
   };
   results: ResultView[];
   total: number;
@@ -112,6 +117,13 @@ export function ResultsClient({
   const runMut = useRunCrawl();
   const filterMut = useApplyCrawlFilter();
   const favoriteMut = useToggleResultFavorite();
+  const enableShare = useEnableCrawlShare();
+  const { ent } = useEntitlements();
+  // The "Copy share link" button is gated on the user's plan, not on the
+  // crawl's current share state — clicking it auto-provisions the link
+  // when the crawl hasn't been shared yet.
+  const canShare = ent?.limits.resultSharing ?? false;
+  const [shareSlug, setShareSlug] = useState<string | null>(initial.job.shareSlug);
   const [results, setResults] = useState(initial.results);
   // Header count must reflect the total stored results for this crawl, not
   // the loaded-page count or the active filter subset. We track it so a
@@ -204,6 +216,40 @@ export function ResultsClient({
     }
   }
 
+  /**
+   * Write the public share URL to the clipboard. If the crawl hasn't
+   * been shared yet, provision the slug + flip public_access on the
+   * server first (one-click share). The Pro+ entitlement gate is
+   * enforced server-side by `enableShare` — the button visibility check
+   * (`canShare`) above is the FE mirror.
+   */
+  async function copyShareLink() {
+    async function writeAndToast(slug: string, fresh: boolean) {
+      const url = `${window.location.origin}/p/${slug}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success(fresh ? 'Sharing enabled — link copied' : 'Link copied', {
+          description: url,
+        });
+      } catch {
+        toast.error('Copy failed', { description: url });
+      }
+    }
+
+    if (shareSlug) {
+      await writeAndToast(shareSlug, false);
+      return;
+    }
+    enableShare.mutate(initial.job.id, {
+      onSuccess: (s) => {
+        setShareSlug(s.shareSlug);
+        if (s.shareSlug) void writeAndToast(s.shareSlug, true);
+      },
+      onError: (e) =>
+        toast.error('Share failed', { description: (e as Error).message }),
+    });
+  }
+
   // One toast id for the whole click-through-fetch lifecycle so retries
   // don't stack.
   function runNow() {
@@ -292,6 +338,24 @@ export function ResultsClient({
             <Pencil className="h-3.5 w-3.5" />
             Edit
           </Button>
+          {canShare && (
+            <Button
+              variant="secondary"
+              onClick={copyShareLink}
+              loading={enableShare.isPending}
+              disabled={enableShare.isPending}
+              className="rounded-lg"
+              aria-label="Copy share link"
+              title={
+                shareSlug
+                  ? `Copy /p/${shareSlug}`
+                  : 'Enable sharing and copy the public link'
+              }
+            >
+              <Link2 className="h-3.5 w-3.5" />
+              {shareSlug ? 'Copy share link' : 'Share'}
+            </Button>
+          )}
           <Button
             id="run-now-btn"
             onClick={runNow}

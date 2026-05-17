@@ -16,6 +16,8 @@ type ApiOut = {
     status: string;
     keywords: string[];
     lastRun: string;
+    publicAccess: boolean;
+    shareSlug: string | null;
   };
   results: ResultView[];
   total: number;

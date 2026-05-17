@@ -34,9 +34,11 @@ export type SearchView = {
   shareSlug: string | null;
 };
 
+// Mirror of `PublicSharedView` from apps/api/src/modules/share/share.service.ts.
+// Internal CUIDs are intentionally absent — see that file for the
+// public-contract checklist.
 export type SharedSearchView = {
   search: {
-    id: string;
     slug: string;
     name: string;
     keywords: string[];
@@ -44,7 +46,6 @@ export type SharedSearchView = {
     lastRun: string;
   };
   results: Array<{
-    id: string;
     title: string;
     url: string;
     snippet: string | null;
