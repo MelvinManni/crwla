@@ -83,6 +83,7 @@ export type UpdateCrawlInput = {
   filterPrompt?: string;
   strict?: boolean;
   status?: 'RUNNING' | 'PAUSED';
+  publicAccess?: boolean;
 };
 
 export function useUpdateCrawl() {
@@ -102,6 +103,28 @@ export function useDeleteCrawl() {
   return useMutation({
     mutationFn: (id: string) => api.delete<void>(`/searches/${id}`),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['searches'] });
+    },
+  });
+}
+
+export function useEnableCrawlShare() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<SearchView>(`/searches/${id}/share`),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: qk.searches.detail(id) });
+      qc.invalidateQueries({ queryKey: ['searches'] });
+    },
+  });
+}
+
+export function useDisableCrawlShare() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<SearchView>(`/searches/${id}/share`),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: qk.searches.detail(id) });
       qc.invalidateQueries({ queryKey: ['searches'] });
     },
   });

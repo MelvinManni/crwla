@@ -84,4 +84,18 @@ export class SearchesController {
   run(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.searches.runNow(user.id, id);
   }
+
+  // Enable share — provisions a slug if needed and flips publicAccess on.
+  // Gated on the Pro+ resultSharing entitlement inside the service.
+  @Post(':id/share')
+  enableShare(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.searches.enableShare(user.id, id);
+  }
+
+  // Disable share — keeps the slug but flips publicAccess off so the
+  // public page short-circuits to limited-access immediately.
+  @Delete(':id/share')
+  disableShare(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.searches.disableShare(user.id, id);
+  }
 }

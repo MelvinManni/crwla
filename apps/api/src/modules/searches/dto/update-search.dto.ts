@@ -23,5 +23,10 @@ export class UpdateSearchDto {
   @IsOptional() @IsArray() @IsString({ each: true }) locations?: string[];
 
   @IsOptional() @IsBoolean() strict?: boolean;
+
+  // Owner-controlled public-share gate. Falsy means the /p/<slug> page
+  // returns the limited-access view even if a slug exists. The entitlement
+  // check happens in the service when toggling on.
+  @IsOptional() @IsBoolean() publicAccess?: boolean;
   // `sources` is server-derived from the active plan; not accepted from clients.
 }

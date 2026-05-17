@@ -183,6 +183,13 @@ export class EntitlementsService {
     }
   }
 
+  async assertResultSharing(userId: string): Promise<void> {
+    const ent = await this.ensureFor(userId);
+    if (!ent.limits.resultSharing) {
+      throw this.limitError('Sharing crawl results requires Pro or Business.');
+    }
+  }
+
   // ---------- Internals -----------------------------------------------
 
   private async activeSubscription(

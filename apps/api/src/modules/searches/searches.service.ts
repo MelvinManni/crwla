@@ -85,7 +85,19 @@ function shape(s: Search & { _count?: { results: number } }) {
     lastError: s.lastError,
     ownerId: s.userId,
     createdAt: s.createdAt.getTime(),
+    publicAccess: s.publicAccess,
+    shareSlug: s.shareSlug,
   };
+}
+
+/**
+ * Random base36 slug. Long enough that brute-force enumeration of
+ * /p/<slug> is impractical without being so long it's user-hostile.
+ */
+function newShareSlug(): string {
+  const left = Math.random().toString(36).slice(2, 8);
+  const right = Math.random().toString(36).slice(2, 8);
+  return `${left}${right}`;
 }
 
 @Injectable()
@@ -271,6 +283,14 @@ export class SearchesService {
     if (typeof dto.strict === 'boolean') data.strict = dto.strict;
     if (dto.cron) data.cron = dto.cron;
     if (dto.status) data.status = dto.status;
+    if (typeof dto.publicAccess === 'boolean') {
+      // Turning sharing ON requires the Pro+ entitlement. Turning it OFF is
+      // always allowed — the owner should always be able to revoke a link.
+      if (dto.publicAccess) {
+        await this.entitlements.assertResultSharing(userId);
+      }
+      data.publicAccess = dto.publicAccess;
+    }
     if (Object.keys(data).length) {
       await this.prisma.search.update({ where: { id }, data });
     }
@@ -335,5 +355,59 @@ export class SearchesService {
       metadata: { name: existing.name },
     });
     return this.scrapeQueue.runNow(existing.id);
+  }
+
+  /**
+   * Provision (idempotently) a share slug and flip `publicAccess` on.
+   * Gated on the Pro+ entitlement. Returns the search shape so the
+   * caller can show the freshly-minted public URL.
+   */
+  async enableShare(userId: string, id: string) {
+    await this.entitlements.assertResultSharing(userId);
+    const existing = await this.getOwned(userId, id);
+    const slug = existing.shareSlug ?? newShareSlug();
+    const updated = await this.prisma.search.update({
+      where: { id: existing.id },
+      data: { publicAccess: true, shareSlug: slug },
+      include: { _count: { select: { results: { where: { hidden: false } } } } },
+    });
+    return shape(updated);
+  }
+
+  /**
+   * Revoke public access. The slug stays in the row so a future re-enable
+   * keeps the same URL — but `publicAccess=false` makes the public route
+   * return the limited-access view immediately.
+   */
+  async disableShare(userId: string, id: string) {
+    const existing = await this.getOwned(userId, id);
+    const updated = await this.prisma.search.update({
+      where: { id: existing.id },
+      data: { publicAccess: false },
+      include: { _count: { select: { results: { where: { hidden: false } } } } },
+    });
+    return shape(updated);
+  }
+
+  /**
+   * Public lookup by slug. Returns null when the slug is unknown OR the
+   * owner has flipped public access off — callers should render the same
+   * "limited access" page in both cases so we don't leak slug existence.
+   */
+  async findShared(slug: string) {
+    const search = await this.prisma.search.findFirst({
+      where: { shareSlug: slug, publicAccess: true, deletedAt: null },
+      include: { user: { select: { name: true } } },
+    });
+    if (!search) return null;
+    return {
+      id: search.id,
+      slug,
+      name: search.name,
+      keywords: search.keywords,
+      ownerName: search.user.name,
+      createdAt: search.createdAt.getTime(),
+      lastRun: relTime(search.lastRunAt) ?? 'never',
+    };
   }
 }

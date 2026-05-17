@@ -24,6 +24,7 @@ export type PlanLimits = {
   apiAccess: boolean;
   customEmailDomain: boolean;
   scheduledExports: boolean;
+  resultSharing: boolean;
   teamSeats: number;
   prioritySupport: boolean;
   uptimeSLA: boolean;

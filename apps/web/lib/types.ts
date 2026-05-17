@@ -30,6 +30,33 @@ export type SearchView = {
   lastError: string | null;
   ownerId: string;
   createdAt: number;
+  publicAccess: boolean;
+  shareSlug: string | null;
+};
+
+export type SharedSearchView = {
+  search: {
+    id: string;
+    slug: string;
+    name: string;
+    keywords: string[];
+    ownerName: string;
+    lastRun: string;
+  };
+  results: Array<{
+    id: string;
+    title: string;
+    url: string;
+    snippet: string | null;
+    source: string;
+    image: string | null;
+    publishedAt: number | null;
+    time: string | null;
+  }>;
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
 };
 
 export type ResultView = {
