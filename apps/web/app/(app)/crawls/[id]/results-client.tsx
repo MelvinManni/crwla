@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ExternalLink,
@@ -11,27 +11,27 @@ import {
   Pencil,
   Play,
   RefreshCw,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { KeywordChip } from '@/components/keyword-chip';
-import { StatusPill } from '@/components/status-pill';
-import { ViewToggle, type ViewMode } from '@/components/view-toggle';
-import { Pagination } from '@/components/pagination';
-import { ListFilterBar, type ListFilters } from '@/components/list-filter-bar';
-import { exportCsv, exportXls, type ExportColumn } from '@/lib/export';
-import { buildListSearch, type ListParams } from '@/lib/list-state';
-import { useQueryClient } from '@tanstack/react-query';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { KeywordChip } from "@/components/keyword-chip";
+import { StatusPill } from "@/components/status-pill";
+import { ViewToggle, type ViewMode } from "@/components/view-toggle";
+import { Pagination } from "@/components/pagination";
+import { ListFilterBar, type ListFilters } from "@/components/list-filter-bar";
+import { exportCsv, exportXls, type ExportColumn } from "@/lib/export";
+import { buildListSearch, type ListParams } from "@/lib/list-state";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   crawlResultsQuery,
   useApplyCrawlFilter,
   useEnableCrawlShare,
   useRunCrawl,
   useToggleResultFavorite,
-} from '@/lib/queries/crawls';
-import { useEntitlements } from '@/components/billing/entitlements-provider';
-import { toast } from '@/components/ui/sonner';
-import { cn } from '@/lib/utils';
-import type { ResultView } from '@/lib/types';
+} from "@/lib/queries/crawls";
+import { useEntitlements } from "@/components/billing/entitlements-provider";
+import { toast } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
+import type { ResultView } from "@/lib/types";
 
 type Initial = {
   job: {
@@ -77,26 +77,27 @@ function siteFavicon(articleUrl: string): string | null {
 }
 
 type Thumb =
-  | { kind: 'cover'; src: string }
-  | { kind: 'site'; src: string }
-  | { kind: 'none' };
+  | { kind: "cover"; src: string }
+  | { kind: "site"; src: string }
+  | { kind: "none" };
 
 function pickThumbnail(r: ResultView): Thumb {
-  if (r.image && !isGoogleThumb(r.image)) return { kind: 'cover', src: r.image };
+  if (r.image && !isGoogleThumb(r.image))
+    return { kind: "cover", src: r.image };
   const fav = siteFavicon(r.url);
-  return fav ? { kind: 'site', src: fav } : { kind: 'none' };
+  return fav ? { kind: "site", src: fav } : { kind: "none" };
 }
 
 const EXPORT_COLUMNS: ExportColumn<ResultView>[] = [
-  { header: 'Source', value: (r) => r.source },
-  { header: 'Title', value: (r) => r.title },
-  { header: 'URL', value: (r) => r.url },
-  { header: 'Snippet', value: (r) => r.snippet ?? '' },
-  { header: 'Tag', value: (r) => r.tag ?? '' },
-  { header: 'When', value: (r) => r.time ?? '' },
+  { header: "Source", value: (r) => r.source },
+  { header: "Title", value: (r) => r.title },
+  { header: "URL", value: (r) => r.url },
+  { header: "Snippet", value: (r) => r.snippet ?? "" },
+  { header: "Tag", value: (r) => r.tag ?? "" },
+  { header: "When", value: (r) => r.time ?? "" },
   {
-    header: 'Published',
-    value: (r) => (r.publishedAt ? new Date(r.publishedAt).toISOString() : ''),
+    header: "Published",
+    value: (r) => (r.publishedAt ? new Date(r.publishedAt).toISOString() : ""),
   },
 ];
 
@@ -121,13 +122,15 @@ export function ResultsClient({
   // crawl's current share state — clicking it auto-provisions the link
   // when the crawl hasn't been shared yet.
   const canShare = ent?.limits.resultSharing ?? false;
-  const [shareSlug, setShareSlug] = useState<string | null>(initial.job.shareSlug);
+  const [shareSlug, setShareSlug] = useState<string | null>(
+    initial.job.shareSlug,
+  );
   const [results, setResults] = useState(initial.results);
   // Header count must reflect the total stored results for this crawl, not
   // the loaded-page count or the active filter subset. We track it so a
   // run-now refresh updates the header.
   const [totalResults, setTotalResults] = useState(initial.total);
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState("");
   const [applied, setApplied] = useState(initial.job.filterPrompt || null);
   const [filterMode, setFilterMode] = useState<string | null>(null);
   // Reload spinner — separate from mutations.
@@ -151,9 +154,11 @@ export function ResultsClient({
       {
         onError: (e) => {
           setResults((arr) =>
-            arr.map((r) => (r.id === resultId ? { ...r, favorite: before } : r)),
+            arr.map((r) =>
+              r.id === resultId ? { ...r, favorite: before } : r,
+            ),
           );
-          toast.error('Could not update favorite', {
+          toast.error("Could not update favorite", {
             description: (e as Error).message,
           });
         },
@@ -164,13 +169,13 @@ export function ResultsClient({
   function setTab(nextFavorite: boolean) {
     if (nextFavorite === favorite) return;
     const sp = new URLSearchParams();
-    if (listParams.q) sp.set('q', listParams.q);
-    if (listParams.keyword) sp.set('keyword', listParams.keyword);
-    if (listParams.time !== 'all') sp.set('time', listParams.time);
-    if (listParams.view !== 'list') sp.set('view', listParams.view);
+    if (listParams.q) sp.set("q", listParams.q);
+    if (listParams.keyword) sp.set("keyword", listParams.keyword);
+    if (listParams.time !== "all") sp.set("time", listParams.time);
+    if (listParams.view !== "list") sp.set("view", listParams.view);
     if (listParams.pageSize !== 20)
-      sp.set('pageSize', String(listParams.pageSize));
-    if (nextFavorite) sp.set('favorite', '1');
+      sp.set("pageSize", String(listParams.pageSize));
+    if (nextFavorite) sp.set("favorite", "1");
     const qs = sp.toString();
     router.push((qs ? `${pathname}?${qs}` : pathname) as never);
   }
@@ -186,12 +191,12 @@ export function ResultsClient({
     setTotalResults(initial.total);
   }, [initial]);
 
-  const busy: 'run' | 'filter' | 'reload' | null = runMut.isPending
-    ? 'run'
+  const busy: "run" | "filter" | "reload" | null = runMut.isPending
+    ? "run"
     : filterMut.isPending
-      ? 'filter'
+      ? "filter"
       : reloading
-        ? 'reload'
+        ? "reload"
         : null;
 
   async function fetchLatest() {
@@ -201,7 +206,7 @@ export function ResultsClient({
     const out = await qc.fetchQuery(crawlResultsQuery(initial.job.id));
     setResults(out.results);
     setTotalResults(out.total);
-    qc.invalidateQueries({ queryKey: ['searches', 'results', initial.job.id] });
+    qc.invalidateQueries({ queryKey: ["searches", "results", initial.job.id] });
     router.refresh();
   }
 
@@ -226,11 +231,11 @@ export function ResultsClient({
       const url = `${window.location.origin}/p/${slug}`;
       try {
         await navigator.clipboard.writeText(url);
-        toast.success(fresh ? 'Sharing enabled — link copied' : 'Link copied', {
+        toast.success(fresh ? "Sharing enabled — link copied" : "Link copied", {
           description: url,
         });
       } catch {
-        toast.error('Copy failed', { description: url });
+        toast.error("Copy failed", { description: url });
       }
     }
 
@@ -244,31 +249,32 @@ export function ResultsClient({
         if (s.shareSlug) void writeAndToast(s.shareSlug, true);
       },
       onError: (e) =>
-        toast.error('Share failed', { description: (e as Error).message }),
+        toast.error("Share failed", { description: (e as Error).message }),
     });
   }
 
   // One toast id for the whole click-through-fetch lifecycle so retries
   // don't stack.
   function runNow() {
-    const t = toast.loading('Starting run…');
+    const t = toast.loading("Starting run…");
     runMut.mutate(initial.job.id, {
       onSuccess: async () => {
-        toast.loading('Run started — fetching results…', { id: t });
+        toast.loading("Run started — fetching results…", { id: t });
         // Let the worker insert results before refetching.
         await new Promise((r) => setTimeout(r, 1500));
         await fetchLatest();
-        toast.success('Results refreshed', { id: t });
+        toast.success("Results refreshed", { id: t });
       },
       onError: (e) => {
         const err = e as Error & { code?: string };
-        if (err.code === 'RUN_IN_PROGRESS') {
-          toast.warning('Run already in progress', {
+        if (err.code === "RUN_IN_PROGRESS") {
+          toast.warning("Run already in progress", {
             id: t,
-            description: 'Wait for the current run to finish before starting another.',
+            description:
+              "Wait for the current run to finish before starting another.",
           });
         } else {
-          toast.error('Run failed', { id: t, description: err.message });
+          toast.error("Run failed", { id: t, description: err.message });
         }
       },
     });
@@ -283,7 +289,7 @@ export function ResultsClient({
           setResults(out.results);
           setFilterMode(out.mode);
           setApplied(filter.trim());
-          setFilter('');
+          setFilter("");
         },
       },
     );
@@ -311,8 +317,8 @@ export function ResultsClient({
               {initial.job.name}
             </h1>
             <p className="mt-0.5 font-mono text-[11px] text-fg-subtle">
-              {totalResults} results · {initial.job.cron.toLowerCase()} · last run{' '}
-              {initial.job.lastRun}
+              {totalResults} results · {initial.job.cron.toLowerCase()} · last
+              run {initial.job.lastRun}
             </p>
           </div>
         </div>
@@ -322,7 +328,7 @@ export function ResultsClient({
             variant="secondary"
             onClick={reload}
             disabled={busy !== null}
-            loading={busy === 'reload'}
+            loading={busy === "reload"}
             className="rounded-lg"
             aria-label="Refresh"
           >
@@ -347,18 +353,18 @@ export function ResultsClient({
               title={
                 shareSlug
                   ? `Copy /p/${shareSlug}`
-                  : 'Enable sharing and copy the public link'
+                  : "Enable sharing and copy the public link"
               }
             >
               <Link2 className="h-3.5 w-3.5" />
-              {shareSlug ? 'Copy share link' : 'Share'}
+              {shareSlug ? "Copy share link" : "Share"}
             </Button>
           )}
           <Button
             id="run-now-btn"
             onClick={runNow}
             disabled={busy !== null}
-            loading={busy === 'run'}
+            loading={busy === "run"}
             className="rounded-lg bg-fg text-bg-elev hover:bg-fg/90"
           >
             <Play className="h-3.5 w-3.5" />
@@ -397,7 +403,7 @@ export function ResultsClient({
             applied,
             onClear: () => setApplied(null),
             mode: filterMode,
-            busy: busy === 'filter',
+            busy: busy === "filter",
           }}
         />
       </div>
@@ -424,7 +430,7 @@ function ResultsPanel({
   favorite: boolean;
   onSetTab: (nextFavorite: boolean) => void;
   onToggleFavorite: (resultId: string) => void;
-  aiPrompt: import('@/components/list-filter-bar').AiPromptFilter;
+  aiPrompt: import("@/components/list-filter-bar").AiPromptFilter;
 }) {
   const router = useRouter();
   const base = `/crawls/${searchId}`;
@@ -441,7 +447,6 @@ function ResultsPanel({
       time: listParams.time,
     });
   }, [listParams.q, listParams.keyword, listParams.time]);
-
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   function pushFilters(next: ListFilters, debounceQuery: boolean) {
@@ -471,37 +476,37 @@ function ResultsPanel({
   // columns. Value is a `<key>-<dir>` slug so the dropdown shows one
   // option per natural reading order (e.g. "Newest first").
   type Sort =
-    | 'when-desc'
-    | 'when-asc'
-    | 'source-asc'
-    | 'source-desc'
-    | 'title-asc'
-    | 'title-desc';
+    | "when-desc"
+    | "when-asc"
+    | "source-asc"
+    | "source-desc"
+    | "title-asc"
+    | "title-desc";
   const SORT_OPTIONS: { value: Sort; label: string }[] = [
-    { value: 'when-desc', label: 'Newest first' },
-    { value: 'when-asc', label: 'Oldest first' },
-    { value: 'source-asc', label: 'Source A–Z' },
-    { value: 'source-desc', label: 'Source Z–A' },
-    { value: 'title-asc', label: 'Title A–Z' },
-    { value: 'title-desc', label: 'Title Z–A' },
+    { value: "when-desc", label: "Newest first" },
+    { value: "when-asc", label: "Oldest first" },
+    { value: "source-asc", label: "Source A–Z" },
+    { value: "source-desc", label: "Source Z–A" },
+    { value: "title-asc", label: "Title A–Z" },
+    { value: "title-desc", label: "Title Z–A" },
   ];
-  const [sort, setSort] = useState<Sort>('when-desc');
+  const [sort, setSort] = useState<Sort>("when-desc");
 
   const sorted = useMemo(() => {
     const out = [...results];
     out.sort((a, b) => {
       switch (sort) {
-        case 'when-desc':
+        case "when-desc":
           return (b.publishedAt ?? 0) - (a.publishedAt ?? 0);
-        case 'when-asc':
+        case "when-asc":
           return (a.publishedAt ?? 0) - (b.publishedAt ?? 0);
-        case 'source-asc':
+        case "source-asc":
           return a.source.localeCompare(b.source);
-        case 'source-desc':
+        case "source-desc":
           return b.source.localeCompare(a.source);
-        case 'title-asc':
+        case "title-asc":
           return a.title.localeCompare(b.title);
-        case 'title-desc':
+        case "title-desc":
           return b.title.localeCompare(a.title);
       }
     });
@@ -509,7 +514,9 @@ function ResultsPanel({
   }, [results, sort]);
 
   function onView(next: ViewMode) {
-    router.push(buildListSearch(base, { view: next, page: 1 }, listParams) as never);
+    router.push(
+      buildListSearch(base, { view: next, page: 1 }, listParams) as never,
+    );
   }
   function onPage(next: number) {
     router.push(buildListSearch(base, { page: next }, listParams) as never);
@@ -520,20 +527,22 @@ function ResultsPanel({
     );
   }
   function onExportCsv() {
-    exportCsv('search-results', sorted, EXPORT_COLUMNS);
+    exportCsv("search-results", sorted, EXPORT_COLUMNS);
   }
   function onExportXls() {
-    exportXls('search-results', sorted, EXPORT_COLUMNS);
+    exportXls("search-results", sorted, EXPORT_COLUMNS);
   }
 
   const isFiltered =
-    listParams.q !== '' || listParams.keyword !== '' || listParams.time !== 'all';
+    listParams.q !== "" ||
+    listParams.keyword !== "" ||
+    listParams.time !== "all";
 
   return (
     <div className="overflow-hidden rounded-[10px] border border-border bg-bg-elev">
       <div className="sticky top-0 z-20 bg-bg-elev">
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-1 ">
             <span className="text-[13px] font-medium">Results</span>
             <span className="font-mono text-[11px] text-fg-muted">
               {isFiltered ? `${total} matching` : `${total} items`}
@@ -553,10 +562,10 @@ function ResultsPanel({
               aria-selected={!favorite}
               onClick={() => onSetTab(false)}
               className={cn(
-                'rounded-full px-3 py-1 text-[12px] font-medium transition-colors',
+                "rounded-full px-3 py-1 text-[12px] font-medium transition-colors",
                 !favorite
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-fg-muted hover:text-fg',
+                  ? "bg-accent text-accent-foreground"
+                  : "text-fg-muted hover:text-fg",
               )}
             >
               All
@@ -567,22 +576,28 @@ function ResultsPanel({
               aria-selected={favorite}
               onClick={() => onSetTab(true)}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-medium transition-colors',
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-medium transition-colors",
                 favorite
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-fg-muted hover:text-fg',
+                  ? "bg-accent text-accent-foreground"
+                  : "text-fg-muted hover:text-fg",
               )}
             >
               <Heart
                 className={cn(
-                  'h-3.5 w-3.5',
-                  favorite ? 'fill-current' : 'fill-transparent',
+                  "h-3.5 w-3.5",
+                  favorite ? "fill-current" : "fill-transparent",
                 )}
               />
               Favorites
             </button>
           </div>
-          <ViewToggle value={listParams.view} onChange={onView} />
+          <div>
+            <ViewToggle
+              className="w-fit"
+              value={listParams.view}
+              onChange={onView}
+            />
+          </div>
         </div>
         <ListFilterBar
           filters={filters}
@@ -606,15 +621,17 @@ function ResultsPanel({
       {sorted.length === 0 ? (
         <div className="px-6 py-12 text-center">
           <p className="text-[13px] font-medium text-fg">
-            {isFiltered ? 'No results match the current filters' : 'No results yet'}
+            {isFiltered
+              ? "No results match the current filters"
+              : "No results yet"}
           </p>
           <p className="mt-1 text-[12px] text-fg-muted">
             {isFiltered
-              ? 'Try clearing a filter or widening the time window.'
-              : 'Press Run now to fire a fresh crawl.'}
+              ? "Try clearing a filter or widening the time window."
+              : "Press Run now to fire a fresh crawl."}
           </p>
         </div>
-      ) : listParams.view === 'list' ? (
+      ) : listParams.view === "list" ? (
         <ul className="divide-y divide-border">
           {sorted.map((r) => (
             <li
@@ -744,18 +761,18 @@ function FavoriteToggle({
         onToggle();
       }}
       aria-pressed={active}
-      aria-label={active ? 'Remove from favorites' : 'Add to favorites'}
+      aria-label={active ? "Remove from favorites" : "Add to favorites"}
       className={cn(
-        'relative z-20 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent transition-colors',
+        "relative z-20 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent transition-colors",
         active
-          ? 'text-accent'
-          : 'text-fg-subtle hover:bg-bg-sunk hover:text-accent',
+          ? "text-accent"
+          : "text-fg-subtle hover:bg-bg-sunk hover:text-accent",
       )}
     >
       <Heart
         className={cn(
-          'h-4 w-4 transition-colors',
-          active ? 'fill-accent' : 'fill-transparent',
+          "h-4 w-4 transition-colors",
+          active ? "fill-accent" : "fill-transparent",
         )}
       />
     </button>
@@ -767,32 +784,34 @@ function ResultThumb({ r }: { r: ResultView }) {
   const initial = pickThumbnail(r);
   const [thumb, setThumb] = useState<Thumb>(initial);
 
-  if (thumb.kind === 'none') {
+  if (thumb.kind === "none") {
     return (
       <div className="thumb-striped h-[76px] w-[76px] shrink-0 overflow-hidden rounded-md border border-border" />
     );
   }
 
-  const isSite = thumb.kind === 'site';
+  const isSite = thumb.kind === "site";
   return (
     <div
       className={cn(
-        'grid h-[76px] w-[76px] shrink-0 overflow-hidden rounded-md border border-border',
-        isSite ? 'place-items-center bg-bg-sunk' : '',
+        "grid h-[76px] w-[76px] shrink-0 overflow-hidden rounded-md border border-border",
+        isSite ? "place-items-center bg-bg-sunk" : "",
       )}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={thumb.src}
         alt=""
-        className={cn(isSite ? 'h-9 w-9 object-contain' : 'h-full w-full object-cover')}
+        className={cn(
+          isSite ? "h-9 w-9 object-contain" : "h-full w-full object-cover",
+        )}
         onError={() => {
           // Cover failed → try the site favicon. Site favicon failed → striped.
-          if (thumb.kind === 'cover') {
+          if (thumb.kind === "cover") {
             const fav = siteFavicon(r.url);
-            setThumb(fav ? { kind: 'site', src: fav } : { kind: 'none' });
+            setThumb(fav ? { kind: "site", src: fav } : { kind: "none" });
           } else {
-            setThumb({ kind: 'none' });
+            setThumb({ kind: "none" });
           }
         }}
       />
@@ -810,31 +829,33 @@ function ResultThumbWide({ r }: { r: ResultView }) {
   const initial = pickThumbnail(r);
   const [thumb, setThumb] = useState<Thumb>(initial);
 
-  if (thumb.kind === 'none') {
+  if (thumb.kind === "none") {
     return (
       <div className="thumb-striped aspect-[16/9] w-full border-b border-border" />
     );
   }
 
-  const isSite = thumb.kind === 'site';
+  const isSite = thumb.kind === "site";
   return (
     <div
       className={cn(
-        'aspect-[16/9] w-full overflow-hidden border-b border-border',
-        isSite ? 'grid place-items-center bg-bg-sunk' : 'bg-bg-sunk',
+        "aspect-[16/9] w-full overflow-hidden border-b border-border",
+        isSite ? "grid place-items-center bg-bg-sunk" : "bg-bg-sunk",
       )}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={thumb.src}
         alt=""
-        className={cn(isSite ? 'h-12 w-12 object-contain' : 'h-full w-full object-cover')}
+        className={cn(
+          isSite ? "h-12 w-12 object-contain" : "h-full w-full object-cover",
+        )}
         onError={() => {
-          if (thumb.kind === 'cover') {
+          if (thumb.kind === "cover") {
             const fav = siteFavicon(r.url);
-            setThumb(fav ? { kind: 'site', src: fav } : { kind: 'none' });
+            setThumb(fav ? { kind: "site", src: fav } : { kind: "none" });
           } else {
-            setThumb({ kind: 'none' });
+            setThumb({ kind: "none" });
           }
         }}
       />

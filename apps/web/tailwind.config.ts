@@ -48,6 +48,10 @@ const config: Config = {
           DEFAULT: 'var(--accent)',
           foreground: 'var(--accent-foreground)',
         },
+        ['accent-light']: {
+          DEFAULT: 'var(--accent-light)',
+          foreground: 'var(--accent-foreground)',
+        },
         card: {
           DEFAULT: 'var(--card)',
           foreground: 'var(--card-foreground)',

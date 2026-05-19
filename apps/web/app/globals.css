@@ -36,6 +36,7 @@
     --secondary-foreground: hsl(var(--fg));
     --muted: hsl(var(--bg-sunk));
     --muted-foreground: hsl(var(--fg-muted));
+    --accent-light: #ffe8e1;
     /* Brand accent — #ff5e3a — exposed via Tailwind's `bg-accent`,
        `text-accent`, `fill-accent`, etc. Existing greyscale hovers at
        `bg-accent/50` shift to a soft warm tint, which lines up with the
@@ -90,6 +91,7 @@
        `bg-accent/50` shift to a soft warm tint, which lines up with the
        editorial palette. */
     --accent: hsl(11 100% 61%);
+    --accent-light: #ffe8e1,
     --accent-foreground: hsl(0 0% 100%);
     --destructive: hsl(0 62% 51%);
     --destructive-foreground: hsl(0 0% 98%);

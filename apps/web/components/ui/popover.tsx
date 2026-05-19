@@ -26,11 +26,21 @@ const PopoverContent = React.forwardRef<
   PopoverContentProps
 >(({ className, align = 'center', side = 'bottom', sideOffset = 6, ...props }, ref) => (
   <PopoverPortal>
-    <BasePopover.Positioner side={side} sideOffset={sideOffset} align={align}>
+    {/* z-50 lives on the Positioner because that's the element that
+        actually sits in <body>'s stacking context. Putting it on the
+        Popup alone fails when the page has a sticky/positioned ancestor
+        with an explicit z-index (e.g. the results-pane filter bar at
+        z-20) — the Positioner without its own z-index lands below it. */}
+    <BasePopover.Positioner
+      side={side}
+      sideOffset={sideOffset}
+      align={align}
+      className="z-50"
+    >
       <BasePopover.Popup
         ref={ref}
         className={cn(
-          'z-50 rounded-md border border-border bg-bg-elev p-1 shadow-lg outline-none',
+          'rounded-md border border-border bg-bg-elev p-1 shadow-lg outline-none',
           'data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 transition-opacity duration-150',
           className,
         )}

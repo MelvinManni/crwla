@@ -19,7 +19,7 @@ export function ViewToggle({
       role="tablist"
       aria-label="Layout"
       className={cn(
-        'inline-flex items-center rounded-lg border border-border bg-bg-elev p-0.5',
+        'flex flex-col sm:inline-flex items-center rounded-lg border border-border bg-bg-elev p-0.5 w-fit',
         className,
       )}
     >

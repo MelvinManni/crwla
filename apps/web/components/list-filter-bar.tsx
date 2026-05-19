@@ -23,6 +23,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import type { ComponentProps } from 'react';
 
 export type TimeWindow = 'all' | '24h' | '7d' | '30d' | '90d';
 
@@ -58,6 +59,55 @@ export type AiPromptFilter = {
   mode: string | null;
   busy?: boolean;
 };
+
+// Filter-scoped wrappers around the shared Accordion primitive. They bake
+// in the open-state highlight (sunk bg on the trigger row and the panel
+// body) so each filter section reads as one active strip.
+//
+// Trigger and Content key off the parent Item's `data-open` via a named
+// Tailwind group. Base-UI puts different attributes on each part — Item
+// and Panel use `data-open`, Trigger uses `data-panel-open` — so reading
+// from the Item is the only source that lights up the whole section
+// consistently.
+function FilterAccordionItem({
+  className,
+  ...props
+}: ComponentProps<typeof AccordionItem>) {
+  return (
+    <AccordionItem
+      className={cn('group/filter-item', className)}
+      {...props}
+    />
+  );
+}
+
+function FilterAccordionTrigger({
+  className,
+  ...props
+}: ComponentProps<typeof AccordionTrigger>) {
+  return (
+    <AccordionTrigger
+      className={cn(
+        'px-3',
+        'group-data-[open]/filter-item:bg-bg-sunk group-data-[open]/filter-item:text-fg group-data-[open]/filter-item:hover:bg-bg-sunk',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function FilterAccordionContent({
+  className,
+  ...props
+}: ComponentProps<typeof AccordionContent>) {
+  return (
+    <AccordionContent
+      className={cn('group-data-[open]/filter-item:bg-bg-sunk', className)}
+      {...props}
+    />
+  );
+}
 
 export function ListFilterBar({
   filters,
@@ -145,16 +195,16 @@ export function ListFilterBar({
           <div className="flex max-h-[65vh] min-h-[350px] flex-col">
             <div className="flex-1 overflow-y-auto">
               <Accordion defaultValue={['search']}>
-                <AccordionItem value="search">
-                  <AccordionTrigger className="px-3">
+                <FilterAccordionItem value="search">
+                  <FilterAccordionTrigger>
                     <span className="text-[12px] font-medium">Search</span>
                     {filters.query.trim() !== '' && (
                       <span className="rounded-full bg-bg-sunk px-2 py-0.5 font-mono text-[10px] text-fg-muted">
                         on
                       </span>
                     )}
-                  </AccordionTrigger>
-                  <AccordionContent>
+                  </FilterAccordionTrigger>
+                  <FilterAccordionContent>
                     <div className="px-3 pb-3">
                       <Input
                         value={filters.query}
@@ -166,11 +216,11 @@ export function ListFilterBar({
                         aria-label="Search"
                       />
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
+                  </FilterAccordionContent>
+                </FilterAccordionItem>
 
-                <AccordionItem value="keyword">
-                  <AccordionTrigger className="px-3">
+                <FilterAccordionItem value="keyword">
+                  <FilterAccordionTrigger>
                     <span className="text-[12px] font-medium">{keywordLabel}</span>
                     {filters.keyword && (
                       <span
@@ -180,8 +230,8 @@ export function ListFilterBar({
                         {filters.keyword}
                       </span>
                     )}
-                  </AccordionTrigger>
-                  <AccordionContent>
+                  </FilterAccordionTrigger>
+                  <FilterAccordionContent>
                     <RadioGroup
                       value={filters.keyword}
                       onChange={(v) => onFilters({ ...filters, keyword: v })}
@@ -190,19 +240,19 @@ export function ListFilterBar({
                         ...keywords.map((k) => ({ value: k, label: k })),
                       ]}
                     />
-                  </AccordionContent>
-                </AccordionItem>
+                  </FilterAccordionContent>
+                </FilterAccordionItem>
 
-                <AccordionItem value="time">
-                  <AccordionTrigger className="px-3">
+                <FilterAccordionItem value="time">
+                  <FilterAccordionTrigger>
                     <span className="text-[12px] font-medium">{timeLabel}</span>
                     {filters.time !== 'all' && (
                       <span className="rounded-full bg-bg-sunk px-2 py-0.5 font-mono text-[10px] text-fg-muted">
                         {TIME_OPTIONS.find((o) => o.value === filters.time)?.label}
                       </span>
                     )}
-                  </AccordionTrigger>
-                  <AccordionContent>
+                  </FilterAccordionTrigger>
+                  <FilterAccordionContent>
                     <RadioGroup
                       value={filters.time}
                       onChange={(v) =>
@@ -210,17 +260,17 @@ export function ListFilterBar({
                       }
                       options={TIME_OPTIONS}
                     />
-                  </AccordionContent>
-                </AccordionItem>
+                  </FilterAccordionContent>
+                </FilterAccordionItem>
 
-                <AccordionItem value="page-size">
-                  <AccordionTrigger className="px-3">
+                <FilterAccordionItem value="page-size">
+                  <FilterAccordionTrigger>
                     <span className="text-[12px] font-medium">Per page</span>
                     <span className="rounded-full bg-bg-sunk px-2 py-0.5 font-mono text-[10px] text-fg-muted">
                       {pageSize}
                     </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
+                  </FilterAccordionTrigger>
+                  <FilterAccordionContent>
                     <RadioGroup
                       value={String(pageSize)}
                       onChange={(v) => onPageSize(Number(v))}
@@ -229,12 +279,12 @@ export function ListFilterBar({
                         label: String(n),
                       }))}
                     />
-                  </AccordionContent>
-                </AccordionItem>
+                  </FilterAccordionContent>
+                </FilterAccordionItem>
 
                 {aiPrompt && (
-                  <AccordionItem value="ai-prompt">
-                    <AccordionTrigger className="px-3">
+                  <FilterAccordionItem value="ai-prompt">
+                    <FilterAccordionTrigger>
                       <Sparkles className="h-3 w-3 text-fg-muted" />
                       <span className="text-[12px] font-medium">AI prompt</span>
                       {aiPrompt.applied && (
@@ -242,8 +292,8 @@ export function ListFilterBar({
                           active
                         </span>
                       )}
-                    </AccordionTrigger>
-                    <AccordionContent>
+                    </FilterAccordionTrigger>
+                    <FilterAccordionContent>
                       <div className="space-y-2 px-3 pb-3">
                         <Textarea
                           value={aiPrompt.value}
@@ -277,8 +327,8 @@ export function ListFilterBar({
                           </p>
                         )}
                       </div>
-                    </AccordionContent>
-                  </AccordionItem>
+                    </FilterAccordionContent>
+                  </FilterAccordionItem>
                 )}
               </Accordion>
             </div>
