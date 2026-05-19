@@ -1,23 +1,31 @@
 // Shared placeholder OG card. Every `opengraph-image.tsx` currently
-// imports this with a per-route caption/title/subtitle. Step 2 will swap
-// the import in each route to a designed per-page component
-// (CrawlDetailOg, SharedCrawlOg, etc.) — no opengraph-image.tsx changes
-// needed unless the prop shape changes.
+// imports this with a per-route caption/title/subtitle. A per-page
+// component (CrawlDetailOg, SharedCrawlOg, etc.) can replace the import
+// without touching opengraph-image.tsx unless the prop shape changes.
+//
+// Typography and palette mirror the "OG Image" handoff design — paper
+// canvas, sans hero with optional Instrument-Serif italic accent
+// (<AccentEm>), and a mono eyebrow.
 
-import { OG_TOKENS, OgFrame } from '@/lib/og/frame';
+import { OG_FONTS, OG_TOKENS, OgFrame } from '@/lib/og/frame';
+import type { ReactNode } from 'react';
 
 export type DefaultOgProps = {
-  /** Top-right mono caption, e.g. "CRWLA / DASHBOARD". */
+  /** Top-right mono tag, e.g. "PARALLEL SEARCH" or "CRAWLS". */
   caption: string;
-  /** Hero phrase. Keep to ≤6 words / 2 lines. */
-  title: string;
-  /** One optional sub-line under the hero. ≤90 chars. */
-  subtitle?: string;
+  /** Hero phrase. Keep to ≤6 words / 2 lines. Accepts a ReactNode so the
+   *  caller can drop an <AccentEm> fragment inline. */
+  title: ReactNode;
+  /** Optional mono eyebrow above the title, e.g. "— INTRODUCING". */
+  eyebrow?: string;
+  /** Optional sub-line beneath the title, ≤90 chars. */
+  subtitle?: ReactNode;
 };
 
 export default function DefaultOg({
   caption,
   title,
+  eyebrow,
   subtitle,
 }: DefaultOgProps) {
   return (
@@ -26,19 +34,33 @@ export default function DefaultOg({
         style={{
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'flex-end',
-          flex: 1,
+          gap: 28,
+          maxWidth: 940,
         }}
       >
+        {eyebrow ? (
+          <div
+            style={{
+              display: 'flex',
+              fontFamily: OG_FONTS.mono,
+              fontSize: 13,
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              color: OG_TOKENS.muted,
+            }}
+          >
+            {eyebrow}
+          </div>
+        ) : null}
         <div
           style={{
             display: 'flex',
-            fontSize: 84,
-            lineHeight: 1.05,
-            letterSpacing: '-0.02em',
+            fontFamily: OG_FONTS.sans,
             fontWeight: 600,
-            maxWidth: 1000,
-            color: OG_TOKENS.fg,
+            fontSize: 86,
+            lineHeight: 0.96,
+            letterSpacing: '-0.035em',
+            color: OG_TOKENS.ink,
           }}
         >
           {title}
@@ -47,10 +69,12 @@ export default function DefaultOg({
           <div
             style={{
               display: 'flex',
-              marginTop: 24,
-              fontSize: 24,
-              color: OG_TOKENS.fgMuted,
-              maxWidth: 900,
+              fontFamily: OG_FONTS.sans,
+              fontSize: 22,
+              lineHeight: 1.45,
+              color: OG_TOKENS.ink2,
+              maxWidth: 720,
+              fontWeight: 400,
             }}
           >
             {subtitle}

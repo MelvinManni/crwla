@@ -11,16 +11,8 @@ import {
   Pencil,
   Play,
   RefreshCw,
-  Sparkles,
 } from 'lucide-react';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { KeywordChip } from '@/components/keyword-chip';
 import { StatusPill } from '@/components/status-pill';
 import { ViewToggle, type ViewMode } from '@/components/view-toggle';
@@ -138,10 +130,6 @@ export function ResultsClient({
   const [filter, setFilter] = useState('');
   const [applied, setApplied] = useState(initial.job.filterPrompt || null);
   const [filterMode, setFilterMode] = useState<string | null>(null);
-  // Accordion default: open when the crawl already has an active
-  // filter so the user can see/edit it without an extra click.
-  // Base-ui's Accordion treats value as an array of opened item ids.
-  const filterDefaultValue = initial.job.filterPrompt ? ['filter'] : [];
   // Reload spinner — separate from mutations.
   const [reloading, setReloading] = useState(false);
 
@@ -389,80 +377,9 @@ export function ResultsClient({
         ))}
       </div>
 
-      {/* Filter prompt accordion (shadcn). Header is always visible
-          and surfaces the active filter at a glance; the textarea +
-          apply controls live behind the collapse. Defaults open when
-          a filter is already applied. */}
-      <div className="px-4 pt-4 md:px-6">
-        <Accordion
-          defaultValue={filterDefaultValue}
-          className="overflow-hidden rounded-[10px] border border-border bg-bg-elev"
-        >
-          <AccordionItem
-            value="filter"
-            id="filter-prompt"
-            className="border-b-0"
-          >
-            <AccordionTrigger className="px-3.5">
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-fg-muted" />
-              <span className="text-[12px] font-medium">Filter prompt</span>
-              {applied && (
-                <span
-                  className="ml-1 max-w-[40ch] truncate rounded-full bg-bg-sunk px-2 py-0.5 font-mono text-[10px] text-fg-muted"
-                  title={applied}
-                >
-                  {applied}
-                </span>
-              )}
-              <span className="ml-auto font-mono text-[10px] text-fg-subtle">
-                applied to {results.length} results
-              </span>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-2.5 border-t border-border p-3.5">
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Textarea
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                    placeholder="Tell the model what to keep — e.g. only Series A or later, surface only North American companies, skip rumors."
-                    className="min-h-[60px] flex-1 rounded-lg bg-bg px-3 py-2.5 text-[13px]"
-                  />
-                  <Button
-                    onClick={applyFilter}
-                    disabled={busy !== null || !filter.trim()}
-                    loading={busy === 'filter'}
-                    className="rounded-lg bg-fg text-bg-elev hover:bg-fg/90 sm:self-start"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    Apply
-                  </Button>
-                </div>
-                {applied && (
-                  <div className="flex items-start gap-2 rounded-md bg-bg-sunk px-2.5 py-2 text-[12px]">
-                    <span className="mt-0.5 shrink-0 font-mono text-[10px] uppercase tracking-[0.06em] text-fg-subtle">
-                      Active
-                    </span>
-                    <span className="flex-1 text-fg">{applied}</span>
-                    <button
-                      onClick={() => setApplied(null)}
-                      className="shrink-0 font-mono text-[11px] text-fg-muted hover:text-fg"
-                    >
-                      clear
-                    </button>
-                  </div>
-                )}
-                {filterMode && (
-                  <p className="font-mono text-[10px] text-fg-subtle">
-                    filter mode: {filterMode}
-                  </p>
-                )}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </div>
-
-      {/* Results panel */}
+      {/* Results panel. AI prompt state is owned by this component
+          and threaded through into the Filter dropdown inside the
+          panel's filter bar. */}
       <div id="results-pane" className="flex-1 px-4 py-4 md:px-6">
         <ResultsPanel
           searchId={initial.job.id}
@@ -473,6 +390,15 @@ export function ResultsClient({
           favorite={favorite}
           onSetTab={setTab}
           onToggleFavorite={toggleFavorite}
+          aiPrompt={{
+            value: filter,
+            onChange: setFilter,
+            onApply: applyFilter,
+            applied,
+            onClear: () => setApplied(null),
+            mode: filterMode,
+            busy: busy === 'filter',
+          }}
         />
       </div>
     </div>
@@ -488,6 +414,7 @@ function ResultsPanel({
   favorite,
   onSetTab,
   onToggleFavorite,
+  aiPrompt,
 }: {
   searchId: string;
   results: ResultView[];
@@ -497,6 +424,7 @@ function ResultsPanel({
   favorite: boolean;
   onSetTab: (nextFavorite: boolean) => void;
   onToggleFavorite: (resultId: string) => void;
+  aiPrompt: import('@/components/list-filter-bar').AiPromptFilter;
 }) {
   const router = useRouter();
   const base = `/crawls/${searchId}`;
@@ -671,6 +599,7 @@ function ResultsPanel({
           sort={sort}
           sortOptions={SORT_OPTIONS}
           onSort={(v) => setSort(v as Sort)}
+          aiPrompt={aiPrompt}
         />
       </div>
 
