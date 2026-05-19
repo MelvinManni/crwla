@@ -1,6 +1,11 @@
 'use client';
 
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +41,16 @@ export function Pagination({
           size="icon-sm"
           variant="outline"
           disabled={page <= 1}
+          onClick={() => onChange(1)}
+          aria-label="First page"
+          className="h-7 w-7 rounded-md"
+        >
+          <ChevronsLeft className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          size="icon-sm"
+          variant="outline"
+          disabled={page <= 1}
           onClick={() => onChange(page - 1)}
           aria-label="Previous page"
           className="h-7 w-7 rounded-md"
@@ -54,6 +69,16 @@ export function Pagination({
           className="h-7 w-7 rounded-md"
         >
           <ChevronRight className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          size="icon-sm"
+          variant="outline"
+          disabled={page >= lastPage}
+          onClick={() => onChange(lastPage)}
+          aria-label="Last page"
+          className="h-7 w-7 rounded-md"
+        >
+          <ChevronsRight className="h-3.5 w-3.5" />
         </Button>
       </div>
     </div>

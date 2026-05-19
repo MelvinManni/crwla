@@ -50,6 +50,7 @@ export default async function ResultsPage({
   if (list.q) qs.set('q', list.q);
   if (list.keyword) qs.set('keyword', list.keyword);
   if (list.time !== 'all') qs.set('time', list.time);
+  qs.set('sort', list.sort);
   if (favorite) qs.set('favorite', '1');
 
   let data: ApiOut;

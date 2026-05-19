@@ -32,6 +32,7 @@ export class ResultsController {
     @Query('keyword') keyword?: string,
     @Query('time') time?: string,
     @Query('favorite') favorite?: string,
+    @Query('sort') sort?: string,
   ) {
     const page = pageRaw ? Number(pageRaw) : undefined;
     const pageSize = pageSizeRaw ? Number(pageSizeRaw) : undefined;
@@ -41,6 +42,7 @@ export class ResultsController {
       q,
       keyword,
       time,
+      sort,
       favorite: favorite === '1' || favorite === 'true',
     });
   }

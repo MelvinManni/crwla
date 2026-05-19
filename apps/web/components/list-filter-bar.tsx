@@ -5,6 +5,7 @@ import {
   Download,
   FileSpreadsheet,
   Filter as FilterIcon,
+  Search as SearchIcon,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -148,13 +149,17 @@ export function ListFilterBar({
   sortLabel?: string;
   aiPrompt?: AiPromptFilter;
 }) {
+  // Search lives inline in the bar now (not inside the dropdown), so it's
+  // visually self-evident and doesn't count toward the "Filters · N" badge.
+  // It IS still wiped by Clear-all so the user has one place to reset
+  // everything they typed across the bar.
   const activeCount = [
-    filters.query.trim() !== '',
     filters.keyword !== '',
     filters.time !== 'all',
     !!aiPrompt?.applied,
   ].filter(Boolean).length;
   const hasFilters = activeCount > 0;
+  const hasSearch = filters.query.trim() !== '';
 
   const activeSortLabel =
     sortOptions?.find((o) => o.value === sort)?.label ?? sortOptions?.[0]?.label;
@@ -171,6 +176,30 @@ export function ListFilterBar({
         className,
       )}
     >
+      {/* Inline search — primary control, sits outside the filter
+          dropdown. The dropdown's Clear-all still empties this field so
+          there's one place to reset everything across the bar. */}
+      <div className="relative min-w-[200px] max-w-[320px] flex-1">
+        <SearchIcon className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-muted" />
+        <Input
+          value={filters.query}
+          onChange={(e) => onFilters({ ...filters, query: e.target.value })}
+          placeholder={searchPlaceholder}
+          className="h-8 rounded-md pl-7 pr-7 text-[13px]"
+          aria-label="Search"
+        />
+        {hasSearch && (
+          <button
+            type="button"
+            onClick={() => onFilters({ ...filters, query: '' })}
+            className="absolute right-1.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-sm text-fg-muted hover:bg-bg-sunk hover:text-fg"
+            aria-label="Clear search"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+
       {/* Filter dropdown */}
       <Popover>
         <PopoverTrigger
@@ -194,31 +223,7 @@ export function ListFilterBar({
               the accordion content scrolls inside the box. */}
           <div className="flex max-h-[65vh] min-h-[350px] flex-col">
             <div className="flex-1 overflow-y-auto">
-              <Accordion defaultValue={['search']}>
-                <FilterAccordionItem value="search">
-                  <FilterAccordionTrigger>
-                    <span className="text-[12px] font-medium">Search</span>
-                    {filters.query.trim() !== '' && (
-                      <span className="rounded-full bg-bg-sunk px-2 py-0.5 font-mono text-[10px] text-fg-muted">
-                        on
-                      </span>
-                    )}
-                  </FilterAccordionTrigger>
-                  <FilterAccordionContent>
-                    <div className="px-3 pb-3">
-                      <Input
-                        value={filters.query}
-                        onChange={(e) =>
-                          onFilters({ ...filters, query: e.target.value })
-                        }
-                        placeholder={searchPlaceholder}
-                        className="h-8 rounded-md text-[13px]"
-                        aria-label="Search"
-                      />
-                    </div>
-                  </FilterAccordionContent>
-                </FilterAccordionItem>
-
+              <Accordion defaultValue={['keyword']}>
                 <FilterAccordionItem value="keyword">
                   <FilterAccordionTrigger>
                     <span className="text-[12px] font-medium">{keywordLabel}</span>

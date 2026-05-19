@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ExternalLink,
@@ -19,7 +19,11 @@ import { ViewToggle, type ViewMode } from "@/components/view-toggle";
 import { Pagination } from "@/components/pagination";
 import { ListFilterBar, type ListFilters } from "@/components/list-filter-bar";
 import { exportCsv, exportXls, type ExportColumn } from "@/lib/export";
-import { buildListSearch, type ListParams } from "@/lib/list-state";
+import {
+  buildListSearch,
+  type ListParams,
+  type ResultSort,
+} from "@/lib/list-state";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   crawlResultsQuery,
@@ -473,16 +477,10 @@ function ResultsPanel({
   }
 
   // Sort dropdown in the filter header replaces the old sortable table
-  // columns. Value is a `<key>-<dir>` slug so the dropdown shows one
-  // option per natural reading order (e.g. "Newest first").
-  type Sort =
-    | "when-desc"
-    | "when-asc"
-    | "source-asc"
-    | "source-desc"
-    | "title-asc"
-    | "title-desc";
-  const SORT_OPTIONS: { value: Sort; label: string }[] = [
+  // columns. The actual sort happens in the API ($queryRawUnsafe ORDER BY
+  // whitelist in results.service.ts) so the loaded `results` array is
+  // already in the right order — no client-side re-sort.
+  const SORT_OPTIONS: { value: ResultSort; label: string }[] = [
     { value: "when-desc", label: "Newest first" },
     { value: "when-asc", label: "Oldest first" },
     { value: "source-asc", label: "Source A–Z" },
@@ -490,28 +488,11 @@ function ResultsPanel({
     { value: "title-asc", label: "Title A–Z" },
     { value: "title-desc", label: "Title Z–A" },
   ];
-  const [sort, setSort] = useState<Sort>("when-desc");
-
-  const sorted = useMemo(() => {
-    const out = [...results];
-    out.sort((a, b) => {
-      switch (sort) {
-        case "when-desc":
-          return (b.publishedAt ?? 0) - (a.publishedAt ?? 0);
-        case "when-asc":
-          return (a.publishedAt ?? 0) - (b.publishedAt ?? 0);
-        case "source-asc":
-          return a.source.localeCompare(b.source);
-        case "source-desc":
-          return b.source.localeCompare(a.source);
-        case "title-asc":
-          return a.title.localeCompare(b.title);
-        case "title-desc":
-          return b.title.localeCompare(a.title);
-      }
-    });
-    return out;
-  }, [results, sort]);
+  function onSort(next: ResultSort) {
+    router.push(
+      buildListSearch(base, { sort: next, page: 1 }, listParams) as never,
+    );
+  }
 
   function onView(next: ViewMode) {
     router.push(
@@ -527,10 +508,10 @@ function ResultsPanel({
     );
   }
   function onExportCsv() {
-    exportCsv("search-results", sorted, EXPORT_COLUMNS);
+    exportCsv("search-results", results, EXPORT_COLUMNS);
   }
   function onExportXls() {
-    exportXls("search-results", sorted, EXPORT_COLUMNS);
+    exportXls("search-results", results, EXPORT_COLUMNS);
   }
 
   const isFiltered =
@@ -593,7 +574,6 @@ function ResultsPanel({
           </div>
           <div>
             <ViewToggle
-              className="w-fit"
               value={listParams.view}
               onChange={onView}
             />
@@ -611,14 +591,14 @@ function ResultsPanel({
           keywordLabel="Matches"
           keywordAnyLabel="Any keyword"
           timeLabel="Published"
-          sort={sort}
+          sort={listParams.sort}
           sortOptions={SORT_OPTIONS}
-          onSort={(v) => setSort(v as Sort)}
+          onSort={(v) => onSort(v as ResultSort)}
           aiPrompt={aiPrompt}
         />
       </div>
 
-      {sorted.length === 0 ? (
+      {results.length === 0 ? (
         <div className="px-6 py-12 text-center">
           <p className="text-[13px] font-medium text-fg">
             {isFiltered
@@ -633,7 +613,7 @@ function ResultsPanel({
         </div>
       ) : listParams.view === "list" ? (
         <ul className="divide-y divide-border">
-          {sorted.map((r) => (
+          {results.map((r) => (
             <li
               key={r.id}
               className="group relative flex items-start gap-3.5 px-4 py-4 transition-colors hover:bg-bg-elev"
@@ -682,7 +662,7 @@ function ResultsPanel({
         </ul>
       ) : (
         <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-4">
-          {sorted.map((r) => (
+          {results.map((r) => (
             <div
               key={r.id}
               className="group relative flex flex-col overflow-hidden rounded-[10px] border border-border bg-bg-elev transition-colors hover:border-border-strong"

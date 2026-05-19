@@ -4,6 +4,16 @@
 
 export type ViewMode = 'list' | 'grid';
 export type TimeWindow = 'all' | '24h' | '7d' | '30d' | '90d';
+/** Result sort keys understood by the API. Format: `<field>-<dir>`. */
+export type ResultSort =
+  | 'when-desc'
+  | 'when-asc'
+  | 'source-asc'
+  | 'source-desc'
+  | 'title-asc'
+  | 'title-desc';
+
+export const DEFAULT_RESULT_SORT: ResultSort = 'when-desc';
 
 export type ListParams = {
   page: number;
@@ -12,6 +22,7 @@ export type ListParams = {
   q: string;
   keyword: string;
   time: TimeWindow;
+  sort: ResultSort;
 };
 
 const TIME_WINDOWS: ReadonlySet<TimeWindow> = new Set([
@@ -20,6 +31,15 @@ const TIME_WINDOWS: ReadonlySet<TimeWindow> = new Set([
   '7d',
   '30d',
   '90d',
+]);
+
+const RESULT_SORTS: ReadonlySet<ResultSort> = new Set([
+  'when-desc',
+  'when-asc',
+  'source-asc',
+  'source-desc',
+  'title-asc',
+  'title-desc',
 ]);
 
 export function parseListParams(
@@ -39,7 +59,10 @@ export function parseListParams(
   const keyword = pickStr(raw.keyword)?.trim() ?? '';
   const timeRaw = pickStr(raw.time) as TimeWindow | undefined;
   const time: TimeWindow = timeRaw && TIME_WINDOWS.has(timeRaw) ? timeRaw : 'all';
-  return { page, pageSize, view, q, keyword, time };
+  const sortRaw = pickStr(raw.sort) as ResultSort | undefined;
+  const sort: ResultSort =
+    sortRaw && RESULT_SORTS.has(sortRaw) ? sortRaw : DEFAULT_RESULT_SORT;
+  return { page, pageSize, view, q, keyword, time, sort };
 }
 
 export function buildListSearch(
@@ -55,6 +78,7 @@ export function buildListSearch(
   if (merged.q) sp.set('q', merged.q);
   if (merged.keyword) sp.set('keyword', merged.keyword);
   if (merged.time !== 'all') sp.set('time', merged.time);
+  if (merged.sort !== DEFAULT_RESULT_SORT) sp.set('sort', merged.sort);
   const q = sp.toString();
   return q ? `${base}?${q}` : base;
 }

@@ -30,6 +30,29 @@ function timeWindowToCutoff(t: string | undefined): Date | null {
   }
 }
 
+// SORT_TO_ORDER_BY is a hard whitelist — `sort` arrives as a query string
+// but its value is inlined into the raw SQL ORDER BY clause, so anything
+// not in this map falls back to the default. Every clause ends with
+// `id ASC` so pagination stays stable when the primary key ties.
+const SORT_TO_ORDER_BY: Record<string, string> = {
+  'when-desc': 'COALESCE(published_at, fetched_at) DESC, id ASC',
+  'when-asc': 'COALESCE(published_at, fetched_at) ASC, id ASC',
+  'source-asc':
+    'LOWER(source) ASC, COALESCE(published_at, fetched_at) DESC, id ASC',
+  'source-desc':
+    'LOWER(source) DESC, COALESCE(published_at, fetched_at) DESC, id ASC',
+  'title-asc':
+    'LOWER(title) ASC, COALESCE(published_at, fetched_at) DESC, id ASC',
+  'title-desc':
+    'LOWER(title) DESC, COALESCE(published_at, fetched_at) DESC, id ASC',
+};
+const DEFAULT_ORDER_BY = SORT_TO_ORDER_BY['when-desc'];
+
+function sortToOrderBy(sort: string | undefined): string {
+  if (!sort) return DEFAULT_ORDER_BY;
+  return SORT_TO_ORDER_BY[sort] ?? DEFAULT_ORDER_BY;
+}
+
 @Injectable()
 export class ResultsService {
   constructor(
@@ -55,6 +78,7 @@ export class ResultsService {
       q?: string;
       keyword?: string;
       time?: string;
+      sort?: string;
       favorite?: boolean;
     } = {},
   ) {
@@ -100,8 +124,12 @@ export class ResultsService {
     );
     const total = Number(totalRow[0]?.count ?? 0);
 
-    // Order by COALESCE(published_at, fetched_at) DESC — Prisma can't express
-    // this directly so use $queryRaw against the snake_case table/column names.
+    // The ORDER BY clause is selected from a hard-coded whitelist
+    // (`SORT_TO_ORDER_BY`) — `opts.sort` arrives as a query string but is
+    // never interpolated; unknown values silently fall back to recency.
+    // Prisma can't express COALESCE/LOWER ordering directly so we keep
+    // $queryRawUnsafe with snake_case columns.
+    const orderBy = sortToOrderBy(opts.sort);
     const rows: Array<{
       id: string;
       source: string;
@@ -117,7 +145,7 @@ export class ResultsService {
       `SELECT id, source, title, url, snippet, image_url, tag, published_at, fetched_at, favorited_at
        FROM result
        WHERE ${whereSql}
-       ORDER BY COALESCE(published_at, fetched_at) DESC
+       ORDER BY ${orderBy}
        LIMIT $${i} OFFSET $${i + 1}`,
       ...values,
       pageSize,
