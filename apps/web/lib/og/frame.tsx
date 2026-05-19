@@ -38,7 +38,7 @@ const FONTS = {
 
 export function OgFrame({
   caption,
-  footnote = 'Est. 2026 · Lagos / Abuja',
+  footnote = '',
   url = 'crwla.app',
   children,
 }: {
