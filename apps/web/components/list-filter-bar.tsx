@@ -216,7 +216,7 @@ export function ListFilterBar({
         />
         <PopoverContent
           align="start"
-          className="w-[340px] p-0"
+          className="w-[340px] p-0 max-h-[450px] overflow-y-auto"
         >
           {/* The min/max-height + scroll lives on the inner wrapper so
               a per-page-applied "Clear all" footer stays sticky and
@@ -368,7 +368,7 @@ export function ListFilterBar({
               </Button>
             }
           />
-          <PopoverContent align="start" className="w-[240px] p-1">
+          <PopoverContent align="start" className="w-[240px] p-1 max-h-[450px] overflow-y-auto">
             <ul className="space-y-0.5">
               {sortOptions.map((o) => {
                 const active = (sort ?? sortOptions[0].value) === o.value;
