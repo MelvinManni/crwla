@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 
 const KEYWORD_SETS = [
@@ -231,34 +232,32 @@ function Nav() {
       ].join(' ')}
     >
       <div className="mx-auto w-full max-w-[1240px] px-8 max-[700px]:px-5 flex items-center justify-between h-16 gap-6 max-[900px]:h-14 max-[900px]:gap-3">
-        <a className="flex items-center gap-2.5 font-space font-bold tracking-[0.06em] text-base text-mk-ink" href="#top">
+        <Link className="flex items-center gap-2.5 font-space font-bold tracking-[0.06em] text-base text-mk-ink" href="#top">
           <span className="relative w-[22px] h-[22px] rounded-full bg-mk-ink overflow-hidden after:content-[''] after:absolute after:inset-1 after:rounded-full after:bg-mk-accent after:animate-mk-orbit" />
           CRWLA
-        </a>
+        </Link>
         <div className="flex gap-7 text-sm text-mk-ink-2 max-[800px]:hidden max-[600px]:hidden">
-          <a className="relative py-1 hover:text-mk-accent" href="#how">
+          <Link className="relative py-1 hover:text-mk-accent" href="#how">
             How it works
-          </a>
-          <a className="relative py-1 hover:text-mk-accent" href="/about">
+          </Link>
+          <Link className="relative py-1 hover:text-mk-accent" href="/about">
             About
-          </a>
-          <a className="relative py-1 hover:text-mk-accent" href="/pricing">
+          </Link>
+          <Link className="relative py-1 hover:text-mk-accent" href="/pricing">
             Pricing
-          </a>
-          <a className="relative py-1 hover:text-mk-accent" href="/contact">
+          </Link>
+          <Link className="relative py-1 hover:text-mk-accent" href="/contact">
             Contact
-          </a>
+          </Link>
         </div>
         <div className="flex gap-3 items-center">
-          <a className="text-sm text-mk-ink-2 hover:text-mk-accent max-[900px]:hidden" href="/signin">
-            Sign in
-          </a>
-          <a
+
+          <Link
             className="inline-flex items-center gap-2 h-[42px] px-[18px] rounded-full font-medium text-sm font-space border border-transparent bg-mk-ink text-mk-chalk transition-transform duration-150 hover:-translate-y-px hover:bg-mk-accent max-[900px]:h-[38px] max-[900px]:px-3.5 max-[900px]:text-[13px]"
-            href="#cta"
+            href="/signin"
           >
             Start crawling <span className="transition-transform">→</span>
-          </a>
+          </Link>
         </div>
       </div>
     </nav>
@@ -305,12 +304,12 @@ function Hero() {
             <em className="font-instrument italic text-[1.05em] text-mk-ink-2">No more 80 open tabs.</em>
           </p>
           <div className="flex gap-3 flex-wrap mt-1 max-[900px]:flex-wrap">
-            <a className={`${BTN_PRIMARY} ${BTN_LG}`} href="#cta">
+            <Link className={`${BTN_PRIMARY} ${BTN_LG}`} href="#cta">
               Start a search <span>→</span>
-            </a>
-            <a className={`${BTN_GHOST} ${BTN_LG}`} href="#how">
+            </Link>
+            <Link className={`${BTN_GHOST} ${BTN_LG}`} href="#how">
               See how
-            </a>
+            </Link>
           </div>
         </div>
         <div className="relative">
@@ -551,12 +550,12 @@ function CTA() {
           </span>
         </h2>
         <div className="flex gap-3.5 justify-center mt-9 flex-wrap max-[900px]:flex-col max-[900px]:items-stretch">
-          <a className={`${BTN_PRIMARY} ${BTN_LG} max-[900px]:justify-center`} href="/request-access">
+          <Link className={`${BTN_PRIMARY} ${BTN_LG} max-[900px]:justify-center`} href="/request-access">
             Get started <span>→</span>
-          </a>
-          <a className={`${BTN_GHOST} ${BTN_LG} max-[900px]:justify-center`} href="/contact">
+          </Link>
+          <Link className={`${BTN_GHOST} ${BTN_LG} max-[900px]:justify-center`} href="/contact">
             Book a demo
-          </a>
+          </Link>
         </div>
         <div className="font-jetbrains text-[11px] tracking-[0.12em] uppercase text-mk-muted mt-[22px]">
           No card. 50 free searches a day.
@@ -576,10 +575,10 @@ function Footer() {
             CRWLA
           </span>
           <div className="flex gap-6 text-[13px] text-mk-muted [&_a:hover]:text-mk-accent max-[900px]:flex-wrap max-[900px]:gap-4">
-            <a href="/">Home</a>
-            <a href="/about">About</a>
-            <a href="/pricing">Pricing</a>
-            <a href="/contact">Contact</a>
+            <Link href="/">Home</Link>
+            <Link href="/about">About</Link>
+            <Link href="/pricing">Pricing</Link>
+            <Link href="/contact">Contact</Link>
           </div>
           <span className="font-jetbrains text-[11px] text-mk-subtle tracking-[0.06em]">© 2026 · Lagos / Abuja</span>
         </div>
