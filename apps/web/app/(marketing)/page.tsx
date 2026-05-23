@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirectIfSession } from '@/lib/auth';
 import { LandingClient } from './landing-client';
 
 export const metadata: Metadata = {
@@ -6,6 +7,7 @@ export const metadata: Metadata = {
   description: 'Paste hundreds of keywords. Watch them land in one live dashboard. No more 80 open tabs.',
 };
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  await redirectIfSession();
   return <LandingClient />;
 }
