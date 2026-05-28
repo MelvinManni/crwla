@@ -1,18 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../core/prisma/prisma.service';
-import { FeatureAccessService } from '../billing/feature-access.service';
-import { ActivityService } from '../activity/activity.service';
-import { PricingCrawlaQueue } from '../../queues/pricing-crawla/pricing-crawla.queue';
-import { PricingIntentService } from './ai/intent.service';
-import { CurrencyService, SUPPORTED_CURRENCIES } from './currency.service';
-import { AdapterRegistry } from './adapters/adapter.registry';
-import {
-  PRICING_CATEGORIES,
-  PRICING_COUNTRIES,
-  PRICING_TRENDING_FALLBACK,
-} from './pricing-crawla.meta';
-import { CreatePricingSearchDto } from './dto/create-pricing-search.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
+import { PrismaService } from "../../core/prisma/prisma.service";
+import { FeatureAccessService } from "../billing/feature-access.service";
+import { ActivityService } from "../activity/activity.service";
+import { PricingCrawlaQueue } from "../../queues/pricing-crawla/pricing-crawla.queue";
+import { PricingIntentService } from "./ai/intent.service";
+import { CurrencyService, SUPPORTED_CURRENCIES } from "./currency.service";
+import { AdapterRegistry } from "./adapters/adapter.registry";
+import { PRICING_CATEGORIES, PRICING_COUNTRIES } from "./pricing-crawla.meta";
+import { CreatePricingSearchDto } from "./dto/create-pricing-search.dto";
 
 export type PricingSearchView = {
   id: string;
@@ -51,10 +47,10 @@ export class PricingCrawlaService {
   async getMeta() {
     const since = new Date(Date.now() - 90 * 86400_000);
     const grouped = await this.prisma.pricingSearch.groupBy({
-      by: ['productName'],
+      by: ["productName"],
       _count: { productName: true },
       where: { createdAt: { gte: since } },
-      orderBy: { _count: { productName: 'desc' } },
+      orderBy: { _count: { productName: "desc" } },
       take: 8,
     });
 
@@ -65,7 +61,7 @@ export class PricingCrawlaService {
             hot: i < 2,
             count: g._count.productName,
           }))
-        : PRICING_TRENDING_FALLBACK.map((t) => ({ ...t, count: 0 }));
+        : [];
 
     // Headline stats — real values where we can compute them, sensible
     // approximations otherwise so the cards always render.
@@ -89,10 +85,13 @@ export class PricingCrawlaService {
     };
   }
 
-  async createSearch(userId: string, dto: CreatePricingSearchDto): Promise<PricingSearchView> {
+  async createSearch(
+    userId: string,
+    dto: CreatePricingSearchDto,
+  ): Promise<PricingSearchView> {
     // Plan-gate + bump the monthly quota in one call. Reads the live
     // `plan.limits` JSON from the DB — no hardcoded tier logic.
-    await this.features.consume(userId, 'pricing_crawla');
+    await this.features.consume(userId, "pricing_crawla");
 
     const intent = await this.intent.generateIntent({
       productName: dto.productName,
@@ -108,7 +107,7 @@ export class PricingCrawlaService {
         intent,
         country: dto.country ?? null,
         category: dto.category ?? null,
-        currency: dto.currency ?? 'USD',
+        currency: dto.currency ?? "USD",
         maxPriceUsd: dto.maxPriceUsd ?? null,
       },
     });
@@ -116,7 +115,7 @@ export class PricingCrawlaService {
     await this.queue.runSearch(row.id);
     this.activity.log({
       userId,
-      type: 'pricing_crawla.search_created',
+      type: "pricing_crawla.search_created",
       targetId: row.id,
       metadata: { productName: row.productName, country: row.country },
     });
@@ -128,7 +127,7 @@ export class PricingCrawlaService {
     const search = await this.requireOwned(userId, searchId);
     const results = await this.prisma.pricingResult.findMany({
       where: { searchId },
-      orderBy: { rankScore: 'desc' },
+      orderBy: { rankScore: "desc" },
     });
     return {
       search: this.shape(search),
@@ -158,10 +157,13 @@ export class PricingCrawlaService {
   async getResultDetail(userId: string, resultId: string) {
     const result = await this.prisma.pricingResult.findUnique({
       where: { id: resultId },
-      include: { search: true, reviews: { orderBy: { createdAt: 'desc' }, take: 20 } },
+      include: {
+        search: true,
+        reviews: { orderBy: { createdAt: "desc" }, take: 20 },
+      },
     });
     if (!result || result.search.userId !== userId) {
-      throw new NotFoundException('not found');
+      throw new NotFoundException("not found");
     }
     return {
       result: {
@@ -215,9 +217,9 @@ export class PricingCrawlaService {
     await this.prisma.pricingSearch.delete({ where: { id: row.id } });
     this.activity.log({
       userId,
-      type: 'pricing_crawla.search_created',
+      type: "pricing_crawla.search_created",
       targetId: row.id,
-      metadata: { action: 'deleted', productName: row.productName },
+      metadata: { action: "deleted", productName: row.productName },
     });
     return { ok: true };
   }
@@ -226,18 +228,21 @@ export class PricingCrawlaService {
     const limit = Math.min(50, Math.max(1, opts.limit ?? 20));
     const rows = await this.prisma.pricingSearch.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: limit,
       include: { _count: { select: { results: true } } },
     });
-    return rows.map((r) => ({ ...this.shape(r), resultCount: r._count.results }));
+    return rows.map((r) => ({
+      ...this.shape(r),
+      resultCount: r._count.results,
+    }));
   }
 
   private async requireOwned(userId: string, id: string) {
     const row = await this.prisma.pricingSearch.findFirst({
       where: { id, userId },
     });
-    if (!row) throw new NotFoundException('not found');
+    if (!row) throw new NotFoundException("not found");
     return row;
   }
 

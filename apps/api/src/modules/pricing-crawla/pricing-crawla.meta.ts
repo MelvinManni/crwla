@@ -32,16 +32,3 @@ export const PRICING_CATEGORIES: ReadonlyArray<string> = [
   'Gaming',
   'Wearables',
 ];
-
-/**
- * Fallback trending queries — used when the DB doesn't yet have enough
- * data to derive trending. The /meta endpoint always tries the DB first.
- */
-export const PRICING_TRENDING_FALLBACK: ReadonlyArray<{ q: string; hot?: boolean }> = [
-  { q: 'iPhone 15 Pro Max', hot: true },
-  { q: 'Samsung S24 Ultra', hot: true },
-  { q: 'AirPods Pro 2' },
-  { q: 'PlayStation 5 Slim' },
-  { q: 'MacBook Air M3' },
-  { q: 'Sony WH-1000XM5' },
-];

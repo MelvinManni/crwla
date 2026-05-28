@@ -37,7 +37,7 @@ export class PricingCrawlaProcessor extends WorkerHost {
       where: { id: searchId },
       data: { status: PricingSearchStatus.RUNNING, startedAt },
     });
-
+  
     try {
       const ctx = {
         intent: search.intent,
