@@ -5,6 +5,7 @@
   "description": "CRWLA monorepo — apps/{api,web,mobile} are independent projects with their own lockfiles. This root package only carries top-level metadata.",
   "scripts": {
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
+    "dev:all": "npm run infra:up && npm run api:dev && npm run web:dev",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
     "infra:logs": "docker compose -f infra/docker-compose.yml logs -f",
     "api:dev": "cd apps/api && npm run dev",

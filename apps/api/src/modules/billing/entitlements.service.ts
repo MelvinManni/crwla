@@ -40,6 +40,8 @@ export type Entitlements = {
     smsAlerts: number;
     whatsappAlerts: number;
     csvExports: number;
+    pricingCrawlaSearches: number;
+    jobSearches: number;
   };
   /**
    * The user's outstanding PENDING ScheduledPlanChange, if any. The FE
@@ -176,19 +178,10 @@ export class EntitlementsService {
     }
   }
 
-  async assertWebhooks(userId: string): Promise<void> {
-    const ent = await this.ensureFor(userId);
-    if (!ent.limits.webhooks) {
-      throw this.limitError('Webhooks require Pro or Business.');
-    }
-  }
-
-  async assertResultSharing(userId: string): Promise<void> {
-    const ent = await this.ensureFor(userId);
-    if (!ent.limits.resultSharing) {
-      throw this.limitError('Sharing crawl results requires Pro or Business.');
-    }
-  }
+  // Note: boolean-flag asserts (webhooks, result_sharing, pricing_crawla,
+  // job_search, etc.) live in FeatureAccessService. Inject that and call
+  // `features.require(userId, '<feature_key>')` instead of writing a new
+  // method here.
 
   // ---------- Internals -----------------------------------------------
 
@@ -246,6 +239,8 @@ export class EntitlementsService {
         smsAlerts: meter.smsAlerts,
         whatsappAlerts: meter.whatsappAlerts,
         csvExports: meter.csvExports,
+        pricingCrawlaSearches: meter.pricingCrawlaSearches,
+        jobSearches: meter.jobSearches,
       },
       pendingChange,
     };
@@ -277,6 +272,37 @@ export class EntitlementsService {
     });
   }
 
+  /**
+   * Atomic per-period counter increment. Public so FeatureAccessService
+   * (and any future feature-specific service) can bump usage without
+   * reimplementing the upsert. Pass any subset of counter deltas; missing
+   * ones default to 0.
+   */
+  async incrementUsage(
+    subscriptionId: string,
+    deltas: Partial<{
+      manualRuns: number;
+      scheduledRuns: number;
+      emailAlerts: number;
+      smsAlerts: number;
+      whatsappAlerts: number;
+      csvExports: number;
+      pricingCrawlaSearches: number;
+      jobSearches: number;
+    }>,
+  ): Promise<void> {
+    return this.bumpUsage(subscriptionId, deltas);
+  }
+
+  /**
+   * Resolve the active subscription (creating a FREE one if missing).
+   * Exposed so FeatureAccessService can attach add-ons / usage bumps to
+   * the right subscription row.
+   */
+  async resolveSubscription(userId: string) {
+    return this.requireSubscription(userId);
+  }
+
   private async bumpUsage(
     subscriptionId: string,
     deltas: Partial<{
@@ -286,6 +312,8 @@ export class EntitlementsService {
       smsAlerts: number;
       whatsappAlerts: number;
       csvExports: number;
+      pricingCrawlaSearches: number;
+      jobSearches: number;
     }>,
   ) {
     const { period, periodStart, periodEnd } = currentPeriod();
@@ -298,6 +326,8 @@ export class EntitlementsService {
         smsAlerts: { increment: deltas.smsAlerts ?? 0 },
         whatsappAlerts: { increment: deltas.whatsappAlerts ?? 0 },
         csvExports: { increment: deltas.csvExports ?? 0 },
+        pricingCrawlaSearches: { increment: deltas.pricingCrawlaSearches ?? 0 },
+        jobSearches: { increment: deltas.jobSearches ?? 0 },
       },
       create: {
         subscriptionId,
@@ -310,6 +340,8 @@ export class EntitlementsService {
         smsAlerts: deltas.smsAlerts ?? 0,
         whatsappAlerts: deltas.whatsappAlerts ?? 0,
         csvExports: deltas.csvExports ?? 0,
+        pricingCrawlaSearches: deltas.pricingCrawlaSearches ?? 0,
+        jobSearches: deltas.jobSearches ?? 0,
       },
     });
   }
@@ -384,5 +416,7 @@ function emptyUsage(): Entitlements['usage'] {
     smsAlerts: 0,
     whatsappAlerts: 0,
     csvExports: 0,
+    pricingCrawlaSearches: 0,
+    jobSearches: 0,
   };
 }

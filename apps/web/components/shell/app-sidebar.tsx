@@ -3,6 +3,8 @@
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
+  Briefcase,
+  Building2,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -10,6 +12,7 @@ import {
   Search,
   Shield,
   Tag,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import {
@@ -41,6 +44,8 @@ type NavItem = {
 const NAV_PRIMARY: NavItem[] = [
   { href: "/dashboard", label: "Crawls", icon: LayoutDashboard },
   { href: "/search", label: "Recent results", icon: Search },
+  { href: "/pricing-crawla", label: "Pricing", icon: TrendingUp },
+  { href: "/jobs", label: "Jobs", icon: Briefcase },
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/billing", label: "Billing", icon: CreditCard },
 ];
@@ -48,6 +53,7 @@ const NAV_PRIMARY: NavItem[] = [
 const NAV_ADMIN: NavItem[] = [
   { href: "/admin", label: "Access requests", icon: Shield },
   { href: "/admin/users", label: "Members", icon: Users },
+  { href: "/admin/tracked-companies", label: "Tracked companies", icon: Building2 },
   { href: "/admin/billing", label: "Plans & Pricing", icon: Tag },
 ];
 

@@ -96,6 +96,26 @@ enum ScheduledPlanChangeStatus {
   CANCELED
 }
 
+enum PricingSearchStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  ERROR
+}
+
+enum JobSearchStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  ERROR
+}
+
+enum TrackedCompanyStatus {
+  ACTIVE
+  PAUSED
+  ERROR
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
@@ -125,6 +145,8 @@ model User {
   scheduledChanges ScheduledPlanChange[]
   onboardingStates OnboardingState[]
   activities       UserActivity[]
+  pricingSearches  PricingSearch[]
+  jobSearches      JobSearch[]
 
   @@map("user")
 }
@@ -427,6 +449,12 @@ model UsageMeter {
   smsAlerts       Int           @default(0) @map("sms_alerts")
   whatsappAlerts  Int           @default(0) @map("whatsapp_alerts")
   csvExports      Int           @default(0) @map("csv_exports")
+  /// Pricing Crawla searches consumed in the period. Gated by
+  /// `PlanLimits.pricingCrawlaSearchesPerMonth` (Starter+ feature).
+  pricingCrawlaSearches Int     @default(0) @map("pricing_crawla_searches")
+  /// Job Search runs consumed in the period. Gated by
+  /// `PlanLimits.jobSearchesPerMonth` (Starter+ feature).
+  jobSearches     Int           @default(0) @map("job_searches")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
@@ -488,4 +516,198 @@ model ScheduledPlanChange {
   @@index([status, scheduledFor])
   @@index([userId, status])
   @@map("scheduled_plan_change")
+}
+
+/// Pricing Crawla — one row per user-initiated price-intelligence search.
+/// The intent string is computed by `PricingIntentService` and cached on the
+/// row so result-page renders and "why is this a match?" prompts don't have
+/// to re-derive it. The worker fan-out is async; `status` reflects pipeline
+/// state.
+model PricingSearch {
+  id          String              @id @default(cuid())
+  userId      String              @map("user_id")
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productName String              @map("product_name")
+  /// AI-generated intent statement (e.g. "Search for authentic iPhone 15 Pro
+  /// Max 256GB sold by verified vendors..."). Stored so the detail view can
+  /// render it and so the relevance check uses the same intent the search
+  /// kicked off with.
+  intent      String              @db.Text
+  country     String?
+  category    String?
+  /// User's preferred display currency at submit time. Live conversions on
+  /// the FE go through `CurrencyService`; this is the default toggle.
+  currency    String              @default("USD")
+  maxPriceUsd Int?                @map("max_price_usd")
+  status      PricingSearchStatus @default(PENDING)
+  /// Free-form pipeline diagnostics: per-adapter timing, dropped counts,
+  /// AI validation summary. Keep payloads small.
+  metadata    Json?
+  startedAt   DateTime?           @map("started_at")
+  finishedAt  DateTime?           @map("finished_at")
+  /// 3 alternative products picked by `RankingService.alternatives()`. We
+  /// store them on the parent row (not as PricingResult rows) because alts
+  /// are search-scoped and never opened standalone — saves a join.
+  alternatives Json?
+  error       String?
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  results PricingResult[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("pricing_search")
+}
+
+/// One ranked product result from a PricingSearch. The top-N (≤20) are
+/// surfaced; ranking is computed at insert time via `RankingService.score()`
+/// and persisted so re-sorts on the FE don't need a recompute.
+model PricingResult {
+  id            String        @id @default(cuid())
+  searchId      String        @map("search_id")
+  search        PricingSearch @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  storeName     String        @map("store_name")
+  /// e.g. "amazon", "jumia", "konga". Matches `SourceAdapter.id`.
+  source        String
+  title         String
+  /// Stored in USD for ranking consistency; FE converts on display.
+  priceUsd      Float         @map("price_usd")
+  /// Source currency price + code, kept for transparency ("originally
+  /// ₦1.8M on Jumia NG, converted to $1,140").
+  priceNative   Float?        @map("price_native")
+  currencyNative String?      @map("currency_native")
+  url           String
+  imageUrl      String?       @map("image_url")
+  youtubeUrl    String?       @map("youtube_url")
+  /// AI-generated short summary of the store's reviews for this product.
+  /// Detail view loads the deeper review list lazily via PricingReview.
+  reviewSummary String?       @map("review_summary") @db.Text
+  rating        Float?
+  reviewCount   Int           @default(0) @map("review_count")
+  /// Composite ranking from `RankingService.score()` (price + trust +
+  /// reviews). Lower is better in the UI but stored as the raw float.
+  trustScore    Float         @default(0) @map("trust_score")
+  rankScore     Float         @default(0) @map("rank_score")
+  /// AI validation verdict ("match" | "mismatch" | "uncertain") + a one-line
+  /// reason. Mismatches are kept but ranked very low.
+  intentMatch   String        @default("match") @map("intent_match")
+  intentReason  String?       @map("intent_reason")
+  /// Percentile vs. other results in the same search (0 = cheapest). Used by
+  /// the FE percentile-bar visualization.
+  percentile    Float         @default(0)
+  /// e.g. "15% OFF", "REFURB". Computed by the adapter or ranking layer.
+  dealBadge     String?       @map("deal_badge")
+  metadata      Json?
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  reviews PricingReview[]
+
+  @@index([searchId, rankScore])
+  @@index([searchId, priceUsd])
+  @@map("pricing_result")
+}
+
+/// Store-specific reviews tied to a single PricingResult. Loaded lazily by
+/// the detail endpoint (the result row carries the summary; full reviews are
+/// pulled on demand).
+model PricingReview {
+  id        String        @id @default(cuid())
+  resultId  String        @map("result_id")
+  result    PricingResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  author    String
+  rating    Float
+  body      String        @db.Text
+  postedAt  DateTime?     @map("posted_at")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@index([resultId, createdAt(sort: Desc)])
+  @@map("pricing_review")
+}
+
+/// Job Search — one row per user-initiated role search across tracked
+/// company career pages. Results are scored by `AiRelevanceService` against
+/// the searched role and persisted with the score.
+model JobSearch {
+  id        String          @id @default(cuid())
+  userId    String          @map("user_id")
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String
+  country   String?
+  remote    Boolean         @default(false)
+  status    JobSearchStatus @default(PENDING)
+  metadata  Json?
+  startedAt   DateTime?     @map("started_at")
+  finishedAt  DateTime?     @map("finished_at")
+  error     String?
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  results JobResult[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("job_search")
+}
+
+model JobResult {
+  id              String     @id @default(cuid())
+  searchId        String     @map("search_id")
+  search          JobSearch  @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  /// Link to the TrackedCompany the listing came from. Nullable so a one-off
+  /// adapter (e.g. a temp LinkedIn fetch) can still attach a result.
+  companyId       String?    @map("company_id")
+  company         TrackedCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyName     String     @map("company_name")
+  title           String
+  location        String?
+  remote          Boolean    @default(false)
+  /// Salary range; nullable when not advertised. `currency` is the ISO code
+  /// the listing used; FE converts via `CurrencyService` when needed.
+  salaryMin       Int?       @map("salary_min")
+  salaryMax       Int?       @map("salary_max")
+  currency        String?
+  /// "year" | "month" | "hour". Kept as a free string for forward-compat.
+  salaryPeriod    String?    @map("salary_period")
+  url             String
+  /// Short description / one-liner pulled from the listing page.
+  description     String?    @db.Text
+  /// AI relevance score 0–100 against the user's query. Below the threshold
+  /// configured in `AiRelevanceService` we drop the row before persistence.
+  relevanceScore  Int        @default(0) @map("relevance_score")
+  /// Free-form tags: ["Full-time", "Remote", "Senior", "React"].
+  tags            String[]   @default([])
+  postedAt        DateTime?  @map("posted_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+
+  @@index([searchId, relevanceScore(sort: Desc)])
+  @@index([companyId])
+  @@map("job_result")
+}
+
+/// Admin-curated list of company career pages we crawl. The crawl interval
+/// is captured in minutes so the admin can pause noisy sources without
+/// dropping the row; `status=PAUSED` excludes them from the next sweep.
+model TrackedCompany {
+  id              String                @id @default(cuid())
+  name            String                @unique
+  careerUrl       String                @map("career_url")
+  /// Optional CSS selector override when the adapter's auto-detection
+  /// stops matching after a site redesign.
+  selector        String?
+  /// Minute cadence. 15 by default; admins can set 5/15/60/1440.
+  crawlIntervalMin Int                  @default(15) @map("crawl_interval_min")
+  status          TrackedCompanyStatus  @default(ACTIVE)
+  lastCrawled     DateTime?             @map("last_crawled")
+  lastError       String?               @map("last_error")
+  /// Cached job count to render in admin without an aggregate join.
+  jobCount        Int                   @default(0) @map("job_count")
+  metadata        Json?
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  results JobResult[]
+
+  @@index([status])
+  @@map("tracked_company")
 }

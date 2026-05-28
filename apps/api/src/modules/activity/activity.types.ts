@@ -24,6 +24,8 @@ export const ACTIVITY_TYPES = [
   'billing.downgrade_scheduled',
   'billing.downgrade_canceled',
   'export.csv',
+  'pricing_crawla.search_created',
+  'job_search.created',
 ] as const;
 
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
@@ -49,4 +51,6 @@ export const ACTIVITY_LABELS: Record<ActivityType, string> = {
   'billing.downgrade_scheduled': 'Scheduled downgrade',
   'billing.downgrade_canceled': 'Canceled downgrade',
   'export.csv': 'Exported CSV',
+  'pricing_crawla.search_created': 'Pricing Crawla search',
+  'job_search.created': 'Job Search',
 };

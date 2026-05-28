@@ -5,3 +5,5 @@
 export const SCRAPE_QUEUE = 'scrape';
 export const SEARCH_INDEX_QUEUE = 'search-index';
 export const SCHEDULED_PLAN_CHANGES_QUEUE = 'scheduled-plan-changes';
+export const PRICING_CRAWLA_QUEUE = 'pricing-crawla';
+export const JOB_SEARCH_QUEUE = 'job-search';

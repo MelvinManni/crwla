@@ -8,12 +8,20 @@ import { SearchIndexProcessor } from './search-index/search-index.processor';
 import { ScraperModule } from '../modules/scraper/scraper.module';
 import { FilterModule } from '../modules/filter/filter.module';
 import {
+  JOB_SEARCH_QUEUE,
+  PRICING_CRAWLA_QUEUE,
   SCHEDULED_PLAN_CHANGES_QUEUE,
   SCRAPE_QUEUE,
   SEARCH_INDEX_QUEUE,
 } from './queue-names';
 
-export { SCRAPE_QUEUE, SEARCH_INDEX_QUEUE, SCHEDULED_PLAN_CHANGES_QUEUE };
+export {
+  SCRAPE_QUEUE,
+  SEARCH_INDEX_QUEUE,
+  SCHEDULED_PLAN_CHANGES_QUEUE,
+  PRICING_CRAWLA_QUEUE,
+  JOB_SEARCH_QUEUE,
+};
 
 @Module({
   imports: [
@@ -44,6 +52,8 @@ export { SCRAPE_QUEUE, SEARCH_INDEX_QUEUE, SCHEDULED_PLAN_CHANGES_QUEUE };
       { name: SCRAPE_QUEUE },
       { name: SEARCH_INDEX_QUEUE },
       { name: SCHEDULED_PLAN_CHANGES_QUEUE },
+      { name: PRICING_CRAWLA_QUEUE },
+      { name: JOB_SEARCH_QUEUE },
     ),
     ScraperModule,
     FilterModule,

@@ -50,6 +50,22 @@ export type PlanLimits = {
   rbac: boolean;
   emailSupport: boolean;
   communitySupport: boolean;
+
+  /**
+   * Pricing Crawla — product-price intelligence crawler. Starter+. Gated
+   * at request-time via `FeatureAccessService.require(userId, 'pricing_crawla')`.
+   */
+  pricingCrawla: boolean;
+  /** Monthly Pricing Crawla searches. -1 = unlimited, 0 = locked. */
+  pricingCrawlaSearchesPerMonth: number;
+
+  /**
+   * Job Search — direct-from-company-careers crawler. Starter+. Gated
+   * via `FeatureAccessService.require(userId, 'job_search')`.
+   */
+  jobSearch: boolean;
+  /** Monthly Job Search runs. -1 = unlimited, 0 = locked. */
+  jobSearchesPerMonth: number;
 };
 
 export type PlanDefinition = {
@@ -102,6 +118,10 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       rbac: false,
       emailSupport: false,
       communitySupport: true,
+      pricingCrawla: false,
+      pricingCrawlaSearchesPerMonth: 0,
+      jobSearch: false,
+      jobSearchesPerMonth: 0,
     },
   },
   {
@@ -140,6 +160,10 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       rbac: false,
       emailSupport: false,
       communitySupport: false,
+      pricingCrawla: true,
+      pricingCrawlaSearchesPerMonth: 25,
+      jobSearch: true,
+      jobSearchesPerMonth: 25,
     },
   },
   {
@@ -178,6 +202,10 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       rbac: false,
       emailSupport: true,
       communitySupport: false,
+      pricingCrawla: true,
+      pricingCrawlaSearchesPerMonth: 100,
+      jobSearch: true,
+      jobSearchesPerMonth: 100,
     },
   },
   {
@@ -216,6 +244,10 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       rbac: false,
       emailSupport: false,
       communitySupport: false,
+      pricingCrawla: true,
+      pricingCrawlaSearchesPerMonth: 400,
+      jobSearch: true,
+      jobSearchesPerMonth: 400,
     },
   },
   {
@@ -255,6 +287,10 @@ export const PLAN_CATALOG: ReadonlyArray<PlanDefinition> = [
       rbac: true,
       emailSupport: false,
       communitySupport: false,
+      pricingCrawla: true,
+      pricingCrawlaSearchesPerMonth: -1,
+      jobSearch: true,
+      jobSearchesPerMonth: -1,
     },
   },
 ];
@@ -418,6 +454,22 @@ export function deriveFeatures(limits: PlanLimits): DerivedFeature[] {
   );
 
   // --- Boolean feature flags ---
+  push(
+    'pricingCrawla',
+    limits.pricingCrawla
+      ? limits.pricingCrawlaSearchesPerMonth < 0
+        ? 'Pricing Crawla — unlimited price-intelligence searches'
+        : `Pricing Crawla — ${limits.pricingCrawlaSearchesPerMonth} searches / month`
+      : null,
+  );
+  push(
+    'jobSearch',
+    limits.jobSearch
+      ? limits.jobSearchesPerMonth < 0
+        ? 'Job Search — unlimited direct-from-careers crawls'
+        : `Job Search — ${limits.jobSearchesPerMonth} searches / month`
+      : null,
+  );
   push('locationSearch', limits.locationSearch ? 'Location-based searches' : null);
   push('smartFiltering', limits.smartFiltering ? 'Smart filtering & duplicate detection' : null);
   push('keywordGenerator', limits.keywordGenerator ? 'Keyword generator (AI-suggested)' : null);

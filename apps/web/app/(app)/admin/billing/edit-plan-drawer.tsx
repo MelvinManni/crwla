@@ -58,6 +58,11 @@ type Limits = {
   rbac: boolean;
   emailSupport: boolean;
   communitySupport: boolean;
+  // Starter+ feature gates
+  pricingCrawla: boolean;
+  pricingCrawlaSearchesPerMonth: number;
+  jobSearch: boolean;
+  jobSearchesPerMonth: number;
 };
 
 const DEFAULT_LIMITS: Limits = {
@@ -89,6 +94,10 @@ const DEFAULT_LIMITS: Limits = {
   rbac: false,
   emailSupport: false,
   communitySupport: false,
+  pricingCrawla: false,
+  pricingCrawlaSearchesPerMonth: 0,
+  jobSearch: false,
+  jobSearchesPerMonth: 0,
 };
 
 function readLimits(raw: Record<string, unknown>): Limits {
@@ -282,6 +291,16 @@ function EditPlanForm({
             <NumField label="WhatsApp alerts / mo" value={limits.whatsappAlertsPerMonth} onChange={(v) => setLimit('whatsappAlertsPerMonth', v)} />
             <NumField label="Result history (days)" value={limits.resultHistoryDays} onChange={(v) => setLimit('resultHistoryDays', v)} />
             <NumField label="Team seats" value={limits.teamSeats} onChange={(v) => setLimit('teamSeats', v)} />
+            <NumField
+              label="Pricing Crawla / mo"
+              value={limits.pricingCrawlaSearchesPerMonth}
+              onChange={(v) => setLimit('pricingCrawlaSearchesPerMonth', v)}
+            />
+            <NumField
+              label="Job Search / mo"
+              value={limits.jobSearchesPerMonth}
+              onChange={(v) => setLimit('jobSearchesPerMonth', v)}
+            />
           </div>
         </section>
 
@@ -302,6 +321,16 @@ function EditPlanForm({
 
         <section className="space-y-1">
           <SectionTitle>Feature flags</SectionTitle>
+          <BoolField
+            label="Pricing Crawla (Starter+ feature)"
+            checked={limits.pricingCrawla}
+            onChange={(v) => setLimit('pricingCrawla', v)}
+          />
+          <BoolField
+            label="Job Search (Starter+ feature)"
+            checked={limits.jobSearch}
+            onChange={(v) => setLimit('jobSearch', v)}
+          />
           <BoolField label="Smart filtering & duplicate detection" checked={limits.smartFiltering} onChange={(v) => setLimit('smartFiltering', v)} />
           <BoolField label="Keyword generator (AI)" checked={limits.keywordGenerator} onChange={(v) => setLimit('keywordGenerator', v)} />
           <BoolField label="Repeated word identification" checked={limits.repeatedWordIdentification} onChange={(v) => setLimit('repeatedWordIdentification', v)} />
@@ -521,6 +550,22 @@ function deriveFeaturesLocal(limits: Limits): DerivedFeature[] {
   );
   push('teamSeats', limits.teamSeats > 1 ? `Up to ${limits.teamSeats} team members` : null);
 
+  push(
+    'pricingCrawla',
+    limits.pricingCrawla
+      ? limits.pricingCrawlaSearchesPerMonth < 0
+        ? 'Pricing Crawla — unlimited price-intelligence searches'
+        : `Pricing Crawla — ${limits.pricingCrawlaSearchesPerMonth} searches / month`
+      : null,
+  );
+  push(
+    'jobSearch',
+    limits.jobSearch
+      ? limits.jobSearchesPerMonth < 0
+        ? 'Job Search — unlimited direct-from-careers crawls'
+        : `Job Search — ${limits.jobSearchesPerMonth} searches / month`
+      : null,
+  );
   push('locationSearch', limits.locationSearch ? 'Location-based searches' : null);
   push('smartFiltering', limits.smartFiltering ? 'Smart filtering & duplicate detection' : null);
   push('keywordGenerator', limits.keywordGenerator ? 'Keyword generator (AI-suggested)' : null);

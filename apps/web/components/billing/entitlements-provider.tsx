@@ -37,6 +37,11 @@ export type PlanLimits = {
   rbac: boolean;
   emailSupport: boolean;
   communitySupport: boolean;
+  // Starter+ feature gates — mirrored from apps/api/.../plans.catalog.ts
+  pricingCrawla: boolean;
+  pricingCrawlaSearchesPerMonth: number;
+  jobSearch: boolean;
+  jobSearchesPerMonth: number;
 };
 
 export type Entitlements = {
@@ -55,6 +60,8 @@ export type Entitlements = {
     smsAlerts: number;
     whatsappAlerts: number;
     csvExports: number;
+    pricingCrawlaSearches: number;
+    jobSearches: number;
   };
 };
 

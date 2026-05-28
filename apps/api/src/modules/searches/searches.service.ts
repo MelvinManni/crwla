@@ -5,6 +5,7 @@ import { ScrapeQueue } from '../../queues/scrape/scrape.queue';
 import { SourceRegistry } from '../scraper/sources/source.registry';
 import { DEFAULT_SOURCES } from '../scraper/sources/source.types';
 import { EntitlementsService } from '../billing/entitlements.service';
+import { FeatureAccessService } from '../billing/feature-access.service';
 import { OnboardingService } from '../onboarding/onboarding.service';
 import { ActivityService } from '../activity/activity.service';
 import { CreateSearchDto } from './dto/create-search.dto';
@@ -107,6 +108,7 @@ export class SearchesService {
     private readonly scrapeQueue: ScrapeQueue,
     private readonly registry: SourceRegistry,
     private readonly entitlements: EntitlementsService,
+    private readonly features: FeatureAccessService,
     private readonly onboarding: OnboardingService,
     private readonly activity: ActivityService,
   ) {}
@@ -287,7 +289,7 @@ export class SearchesService {
       // Turning sharing ON requires the Pro+ entitlement. Turning it OFF is
       // always allowed — the owner should always be able to revoke a link.
       if (dto.publicAccess) {
-        await this.entitlements.assertResultSharing(userId);
+        await this.features.require(userId, 'result_sharing');
       }
       data.publicAccess = dto.publicAccess;
     }
@@ -363,7 +365,7 @@ export class SearchesService {
    * caller can show the freshly-minted public URL.
    */
   async enableShare(userId: string, id: string) {
-    await this.entitlements.assertResultSharing(userId);
+    await this.features.require(userId, 'result_sharing');
     const existing = await this.getOwned(userId, id);
     const slug = existing.shareSlug ?? newShareSlug();
     const updated = await this.prisma.search.update({
