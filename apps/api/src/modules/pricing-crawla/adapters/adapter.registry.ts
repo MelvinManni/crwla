@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { LinkValidatorService } from '../crawling/link-validator.service';
 import { ProductExtractorService } from '../crawling/product-extractor.service';
 import { WebSearchService } from '../crawling/web-search.service';
 import type { SourceAdapter } from './source-adapter';
 import { WebSearchAdapter, type RetailerConfig } from './web-search.adapter';
+import { OpenWebSearchAdapter } from './open-web.adapter';
 
 /**
  * Catalog of retailers we crawl. Adding a new one is a single line —
@@ -23,19 +24,32 @@ const RETAILERS: ReadonlyArray<RetailerConfig> = [
   { id: 'samsung', storeName: 'Samsung (Official)', domain: 'samsung.com', baselineTrust: 1.0, category: 'brand' },
 ];
 
+/**
+ * Set of domains covered by site-specific adapters. Shared with the
+ * OpenWebSearchAdapter so the broad search doesn't re-discover URLs
+ * we're already crawling directly.
+ */
+export const KNOWN_RETAILER_DOMAINS: ReadonlySet<string> = new Set(
+  RETAILERS.map((r) => r.domain),
+);
+
 @Injectable()
 export class AdapterRegistry {
-  private readonly logger = new Logger(AdapterRegistry.name);
   private readonly adapters: SourceAdapter[];
 
   constructor(
     private readonly search: WebSearchService,
     private readonly validator: LinkValidatorService,
     private readonly extractor: ProductExtractorService,
+    private readonly openWeb: OpenWebSearchAdapter,
   ) {
-    this.adapters = RETAILERS.map(
+    const siteSpecific = RETAILERS.map(
       (r) => new WebSearchAdapter(r, this.search, this.validator, this.extractor),
     );
+    // Open-web adapter runs in the same parallel fan-out as the
+    // site-specific ones. It receives the known-domain set via Nest DI
+    // (see PricingCrawlaModule providers).
+    this.adapters = [...siteSpecific, this.openWeb];
   }
 
   all(): readonly SourceAdapter[] {

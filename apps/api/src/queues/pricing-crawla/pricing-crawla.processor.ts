@@ -1,5 +1,4 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PricingSearchStatus } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
@@ -10,12 +9,16 @@ import { RankingService } from '../../modules/pricing-crawla/ranking.service';
 import type { RawListing } from '../../modules/pricing-crawla/adapters/source-adapter';
 import { PRICING_CRAWLA_QUEUE } from '../queue-names';
 
-const MAX_RESULTS = 20;
+/**
+ * How many ranked rows we persist. Adapters now pull the full universe
+ * of search hits (no per-source cap before ranking), so this number is
+ * the *display* limit — the long tail still exists, but it lives in
+ * `pricing_search.metadata` rather than the surfaced result list.
+ */
+const MAX_RESULTS = 10;
 
 @Processor(PRICING_CRAWLA_QUEUE, { concurrency: 4 })
 export class PricingCrawlaProcessor extends WorkerHost {
-  private readonly logger = new Logger(PricingCrawlaProcessor.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly registry: AdapterRegistry,
@@ -191,7 +194,13 @@ export class PricingCrawlaProcessor extends WorkerHost {
           alternatives: alts,
           metadata: {
             adapterCount: adapters.length,
+            // Total raw listings the adapters produced before any filtering.
             totalCollected: collected.length,
+            // After source+title dedup but before the mismatch backfill.
+            uniqueAfterDedup: deduped.size,
+            // After the mismatch backfill — what got into the rank pool.
+            cleanForRanking: cleanRanked.length,
+            // What we actually persisted (capped at MAX_RESULTS).
             keptAfterRanking: finalRows.length,
             droppedForMismatch: droppedRows.length,
             // First few mismatch reasons — surfaced for admin debugging.

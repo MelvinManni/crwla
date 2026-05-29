@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { ProductImage } from "../_product-image";
 import {
   useDeletePricingSearch,
   useFxRates,
@@ -220,9 +221,13 @@ export function PricingResultsClient({ searchId }: { searchId: string }) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {search.alternatives.slice(0, 3).map((a, i) => (
               <Card key={i} className="flex gap-3 p-3">
-                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-md bg-bg-sunk text-fg-muted">
-                  <Search className="h-4 w-4" />
-                </div>
+                <ProductImage
+                  src={a.imageUrl}
+                  alt={a.title}
+                  fit="contain"
+                  className="h-14 w-14 shrink-0 rounded-md"
+                  iconClassName="h-4 w-4"
+                />
                 <div className="min-w-0 flex-1">
                   <div className="line-clamp-2 text-[13px] font-medium">{a.title}</div>
                   <div className="font-mono text-[12px] text-fg-muted">
@@ -262,8 +267,13 @@ function ProductCard({
       href={`/pricing-crawla/result/${product.id}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card text-left transition hover:border-fg/30 hover:shadow"
     >
-      <div className="relative grid h-32 w-full place-items-center bg-bg-sunk text-fg-muted">
-        <Search className="h-6 w-6" />
+      <div className="relative h-32 w-full">
+        <ProductImage
+          src={product.imageUrl}
+          alt={product.title}
+          fit="contain"
+          className="h-full w-full"
+        />
         {product.dealBadge && (
           <span className="absolute left-2 top-2 rounded bg-primary px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-primary-foreground">
             {product.dealBadge}

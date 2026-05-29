@@ -7,7 +7,6 @@ import {
   ExternalLink,
   Heart,
   Play,
-  Search,
   Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useFxRates, usePricingDetail } from "@/lib/queries/pricing-crawla";
+import { ProductImage } from "../../_product-image";
 
 const CURRENCY_SYMBOL: Record<string, string> = {
   USD: "$",
@@ -73,9 +73,14 @@ export function PricingDetailClient({ resultId }: { resultId: string }) {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr]">
         <Card className="overflow-hidden p-0">
-          <div className="grid h-48 w-full place-items-center bg-bg-sunk text-fg-muted">
-            <Search className="h-8 w-8" />
-          </div>
+          <ProductImage
+            src={r.imageUrl}
+            alt={r.title}
+            fit="contain"
+            className="h-48 w-full"
+            iconClassName="h-8 w-8"
+          />
+
           <div className="flex flex-wrap items-center justify-between gap-3 p-5">
             <div>
               <div className="flex items-baseline gap-1">

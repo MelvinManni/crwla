@@ -11,7 +11,11 @@ export type RetailerConfig = {
   domain: string;
   baselineTrust: number;
   category: SourceAdapter['category'];
-  /** Max product pages we crawl per search (cost control). */
+  /**
+   * Max product pages we crawl per search. Default is generous (20) so
+   * the ranking layer has the full picture; set lower per-retailer only
+   * when a specific site has expensive page loads.
+   */
   maxResults?: number;
 };
 
@@ -49,7 +53,7 @@ export class WebSearchAdapter implements SourceAdapter {
     this.baselineTrust = cfg.baselineTrust;
     this.category = cfg.category;
     this.domain = cfg.domain;
-    this.maxResults = cfg.maxResults ?? 3;
+    this.maxResults = cfg.maxResults ?? 20;
     this.logger = new Logger(`WebSearchAdapter:${cfg.id}`);
   }
 

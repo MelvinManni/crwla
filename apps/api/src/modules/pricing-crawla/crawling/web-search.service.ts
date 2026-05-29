@@ -38,17 +38,26 @@ export class WebSearchService {
   /**
    * Search a single site for a product query.
    *   searchSite("iPhone 17 Pro", "amazon.com") → list of amazon.com URLs
+   *
+   * Pulls everything DDG returns on one page (up to ~30 organic hits) and
+   * filters to the requested host. Downstream ranking + persistence
+   * decides which subset survives; we don't pre-cap at search time.
    */
-  async searchSite(query: string, site: string, limit = 4): Promise<SearchHit[]> {
+  async searchSite(query: string, site: string, limit = 20): Promise<SearchHit[]> {
     const q = `${query} site:${site}`;
-    const hits = await this.search(q, limit * 2);
+    const hits = await this.search(q, Math.max(limit * 2, 30));
     // Defensive: keep only URLs whose host matches the site filter.
     return hits
       .filter((h) => h.url.includes(site))
       .slice(0, limit);
   }
 
-  async search(q: string, limit = 10): Promise<SearchHit[]> {
+  /**
+   * Broad search. Default `limit` is generous (one full DDG page) so the
+   * caller gets the whole universe of hits to refine; pass a smaller
+   * number only when you need a hard cap.
+   */
+  async search(q: string, limit = 50): Promise<SearchHit[]> {
     const params = new URLSearchParams({ q, kl: 'us-en' });
     const url = `https://html.duckduckgo.com/html/?${params.toString()}`;
     const html = await this.fetchHtml(url);

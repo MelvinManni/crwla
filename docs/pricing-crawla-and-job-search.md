@@ -87,12 +87,13 @@ This is the multi-stage filter that turns a query into clean rows. **Every gate 
 ```mermaid
 flowchart TD
     Q[Query: 'iPhone 17 Pro']
-    Q --> A[AdapterRegistry<br/>9 retailer adapters in parallel]
+    Q --> A["AdapterRegistry<br/>9 site-specific adapters<br/>+ 1 open-web adapter<br/>in one Promise.all fan-out"]
 
-    A --> WSA[WebSearchAdapter per retailer]
+    A --> WSA["WebSearchAdapter per retailer<br/>site:amazon.com, site:bestbuy.com, ..."]
+    A --> OWA["OpenWebSearchAdapter<br/>'<product>' buy price<br/>(no site filter)"]
 
     subgraph "Per-retailer pipeline"
-        WSA --> WS[WebSearchService<br/>DuckDuckGo HTML<br/>'iPhone 17 Pro site:amazon.com']
+        WSA --> WS[WebSearchService<br/>DuckDuckGo HTML]
         WS -->|raw URLs| LV{LinkValidator<br/>HEAD then GET<br/>follows redirects}
         LV -->|❌ dead/timeout| Drop1[(dropped)]
         LV -->|✅ 2xx/3xx| EX{ProductExtractor}
@@ -108,18 +109,40 @@ flowchart TD
         Merge -->|✅ both present| Lst[RawListing]
     end
 
+    subgraph "Open-web pipeline"
+        OWA --> OWS[WebSearchService<br/>broad query, 15 hits]
+        OWS --> HF{Host filter}
+        HF -->|❌ known retailer<br/>already covered| Drop4[(dropped)]
+        HF -->|❌ non-commerce<br/>theverge, reddit, ...| Drop5[(dropped)]
+        HF -->|✅| LV2{LinkValidator}
+        LV2 -->|❌| Drop6[(dropped)]
+        LV2 -->|✅| EX2{ProductExtractor}
+        EX2 -->|❌ no product schema| Drop7[(dropped)]
+        EX2 -->|✅| Lst2[RawListing<br/>storeName derived from host]
+    end
+
     Lst --> N[CurrencyService.toUsd<br/>normalize price]
+    Lst2 --> N
     N --> IV{IntentService.validate<br/>critical-token check}
     IV -->|verdict| R[RankingService.score<br/>price·trust·reviews·rating·intent]
 
     R --> BF{Backfill filter<br/>drop verdict=mismatch}
     BF -->|❌| Drop3[(dropped, logged<br/>to metadata)]
-    BF -->|✅| Top[Top 20 by rankScore]
+    BF -->|✅| Top[Top 10 by rankScore]
 
     Top --> Alt[Pick 3 alternatives<br/>from long tail]
     Top --> P[(pricing_result rows<br/>persisted)]
     Alt --> S[(pricing_search.alternatives<br/>JSON column)]
 ```
+
+**Two channels, same refinement.** Site-specific adapters use `site:` filters so they're targeted; the **open-web adapter** runs a broad search and refines via:
+
+1. **Known-retailer skip** — drops URLs whose host is already covered by a site-specific adapter (shared `KNOWN_RETAILER_DOMAINS` set; no double-counting).
+2. **Non-commerce blocklist** — drops obvious news/review/social hosts (wikipedia, theverge, reddit, twitter, …) before spending a network round-trip.
+3. **Live URL check** — same `LinkValidatorService` everyone uses.
+4. **Product-schema check** — the `ProductExtractorService` only returns when JSON-LD `Product`, `og:price:amount`, or microdata `itemprop="price"` is present. Editorial pages don't have these — only real listings do.
+5. **Per-listing storeName** is derived from the URL host (`newegg.com` → "Newegg"), so the FE shows the actual retailer name rather than "Open Web".
+6. **Lower trust** (baseline 0.45, hint 0.4) so open-web listings only outrank curated retailers when the price is genuinely lower.
 
 ### 1d. Intent validation (catches version drift)
 
@@ -477,7 +500,14 @@ Add a single entry to `RETAILERS` in `apps/api/src/modules/pricing-crawla/adapte
   baselineTrust: 0.85, category: 'marketplace' }
 ```
 
-`WebSearchAdapter` handles the rest (search → validate → extract).
+`WebSearchAdapter` handles the rest (search → validate → extract). The
+domain auto-joins `KNOWN_RETAILER_DOMAINS`, so the open-web adapter stops
+discovering URLs from this retailer to avoid duplicates.
+
+**When to promote an open-web discovery to a site-specific adapter**:
+when a retailer shows up repeatedly in `pricing_result.metadata.host`
+and you want a higher baseline trust score, dedicated SERP slots, or a
+guaranteed search-position even when the open-web hit rate is noisy.
 
 ### How to add a new tracked company
 
@@ -486,12 +516,20 @@ Admin opens `/admin/tracked-companies → Add company`. The next worker sweep (d
 ### Where rejected listings get logged
 
 `pricing_search.metadata` includes:
-- `totalCollected` — raw listings from all adapters
-- `keptAfterRanking` — what made it to disk
+- `adapterCount` — how many adapters fanned out
+- `totalCollected` — raw listings from all adapters (pre-filter)
+- `uniqueAfterDedup` — after `source::title` collapse
+- `cleanForRanking` — after the mismatch backfill filter
+- `keptAfterRanking` — what made it to disk (top 10 by rankScore)
 - `droppedForMismatch` — failed the intent backstop
 - `sampleDropReasons` — first 5 mismatch reasons (store, title, why)
 - `errors` — per-adapter failures
 - `durationMs`
+
+The funnel from `totalCollected → keptAfterRanking` is the most useful
+debugging signal: a large gap means the search is finding plenty of
+candidates but ranking/filtering is rejecting most of them — usually
+because intent validation is catching version drift.
 
 Useful for figuring out why a search returned fewer results than expected.
 
