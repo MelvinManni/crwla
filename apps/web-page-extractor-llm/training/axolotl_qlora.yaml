@@ -1,0 +1,99 @@
+# Axolotl QLoRA fine-tune for web-page-extractor-llm.
+#
+# Base model: Qwen 2.5 7B Instruct. The Instruct variant already
+# follows chat-template + ChatML, so we don't need a base-to-chat
+# conversion step. Swap `base_model` to a Qwen3 / Gemma 3 build when
+# Qwen 7B underperforms on structured output.
+#
+# Training data: ShareGPT JSONL produced by training/synthetic_data_generator.py.
+# Each example carries the EXACT system prompt from src/prompts.py so the
+# model never forgets the schema-only contract.
+#
+# Run:
+#   accelerate launch -m axolotl.cli.train training/axolotl_qlora.yaml
+#
+# After it finishes:
+#   - LoRA adapter weights land in `training/output/`.
+#   - Merge:    accelerate launch -m axolotl.cli.merge_lora training/axolotl_qlora.yaml
+#   - Convert + quantize to GGUF: ./training/convert_to_gguf.sh
+
+base_model: Qwen/Qwen2.5-7B-Instruct
+model_type: AutoModelForCausalLM
+tokenizer_type: AutoTokenizer
+trust_remote_code: true
+
+# ── Quantization: 4-bit QLoRA so the whole run fits on a single ──
+# ── 16–24 GB GPU. CPU training is technically possible but glacial.
+load_in_4bit: true
+bnb_4bit_compute_dtype: bfloat16
+bnb_4bit_quant_type: nf4
+bnb_4bit_use_double_quant: true
+
+# ── LoRA adapter ────────────────────────────────────────────────
+adapter: qlora
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+lora_target_linear: true     # all linear layers → most generalisation
+lora_modules_to_save: []
+
+# ── Data ────────────────────────────────────────────────────────
+# ShareGPT format: each row is {"conversations": [{"from": "system"|"human"|"gpt", "value": "..."}]}.
+# The generator always emits a SYSTEM turn with the exact 80-token prompt.
+datasets:
+  - path: training/data/train.jsonl
+    type: sharegpt
+    conversation: chatml
+chat_template: chatml
+
+# Validation split — held out from the same generator output.
+val_set_size: 0.05
+shuffle_merged_datasets: true
+
+# ── Sequence length: long enough to fit big pages + JSON output ──
+sequence_len: 8192
+sample_packing: true
+pad_to_sequence_len: true
+eval_sample_packing: false
+
+# ── Optimization ────────────────────────────────────────────────
+gradient_accumulation_steps: 8
+micro_batch_size: 1
+num_epochs: 3
+optimizer: adamw_bnb_8bit
+lr_scheduler: cosine
+learning_rate: 0.0002
+warmup_ratio: 0.05
+weight_decay: 0.0
+max_grad_norm: 1.0
+
+# ── Mixed precision (auto-pick BF16 on Ampere+, FP16 elsewhere) ──
+bf16: auto
+fp16: false
+tf32: true
+
+# ── Memory / speed ──────────────────────────────────────────────
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+flash_attention: true
+
+# ── Output ──────────────────────────────────────────────────────
+output_dir: training/output
+hub_model_id:                # set if you want to push to HF Hub
+hub_strategy: end
+save_strategy: epoch
+save_total_limit: 2
+logging_steps: 10
+eval_strategy: steps
+eval_steps: 100
+
+# ── Anti-overfit on the JSON-only contract ──────────────────────
+# Train_on_inputs=false means loss is only computed on the assistant
+# turn — the page HTML in the user turn isn't a target. This is what
+# you want for structured-output fine-tuning.
+train_on_inputs: false
+
+# ── Special tokens ──────────────────────────────────────────────
+special_tokens:
+  pad_token: "<|endoftext|>"

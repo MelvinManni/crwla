@@ -15,7 +15,19 @@
     "api:migrate": "cd apps/api && npx prisma migrate deploy",
     "api:self-check": "cd apps/api && npm run self-check",
     "web:dev": "cd apps/web && npm run dev",
-    "mobile:dev": "cd apps/mobile && npx expo start"
+    "mobile:dev": "cd apps/mobile && npx expo start",
+    "llm:install": "cd apps/web-page-extractor-llm && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/playwright install chromium",
+    "llm:dev": "cd apps/web-page-extractor-llm && .venv/bin/uvicorn src.main:app --reload --port ${PORT:-8000}",
+    "llm:start": "cd apps/web-page-extractor-llm && ./scripts/start.sh",
+    "llm:postgres:up": "docker run -d --name wpe-postgres --restart unless-stopped -p 127.0.0.1:5434:5432 -e POSTGRES_USER=wpe -e POSTGRES_PASSWORD=wpe -e POSTGRES_DB=wpe -v wpe-postgres-data:/var/lib/postgresql/data pgvector/pgvector:pg16",
+    "llm:postgres:down": "docker rm -f wpe-postgres",
+    "llm:postgres:logs": "docker logs -f wpe-postgres",
+    "llm:migrate": "cat apps/web-page-extractor-llm/db/migrations/001_init.sql | docker exec -i wpe-postgres psql -U wpe -d wpe -v ON_ERROR_STOP=1",
+    "llm:health": "curl -fsS http://localhost:${PORT:-8000}/ready",
+    "llm:docker:build": "docker compose -f apps/web-page-extractor-llm/docker-compose.yml build app",
+    "llm:docker:run": "docker compose -f apps/web-page-extractor-llm/docker-compose.yml up",
+    "llm:docker:down": "docker compose -f apps/web-page-extractor-llm/docker-compose.yml down",
+    "llm:ollama:load": "cd apps/web-page-extractor-llm && OLLAMA_HOST=${OLLAMA_HOST:-127.0.0.1:11434} ./scripts/load_model.sh"
   },
   "engines": {
     "node": ">=20"

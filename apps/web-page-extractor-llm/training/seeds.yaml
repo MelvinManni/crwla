@@ -1,0 +1,73 @@
+# Seed list for synthetic_data_generator.py. Each entry produces one
+# ShareGPT training row (assuming the page fetches + the teacher
+# returns valid JSON). Mix retailers + schemas heavily — the model
+# needs to learn the contract on diverse inputs.
+#
+# Fields:
+#   url     : the live product / job / listing URL
+#   goal    : free-form instruction (what the model should extract)
+#   schema  : the JSON shape we want back (kept simple — schema kept here
+#             as plain dicts; the generator validates with jsonschema)
+
+# ── Pricing schema (matches src/agent/nodes.py defaults) ────
+- url: https://www.apple.com/shop/buy-iphone/iphone-15-pro
+  goal: Extract the product listing on this page.
+  schema:
+    type: object
+    properties:
+      title:        { type: [string, "null"] }
+      brand:        { type: [string, "null"] }
+      price:        { type: [number, "null"] }
+      currency:     { type: [string, "null"] }
+      image:        { type: [string, "null"] }
+      rating:       { type: [number, "null"] }
+      reviewCount:  { type: [integer, "null"] }
+    required: [title, price, currency]
+
+- url: https://www.bestbuy.com/site/apple-iphone-15-pro-max-256gb-natural-titanium/6525451.p
+  goal: Extract the product listing on this page.
+  schema:
+    type: object
+    properties:
+      title:        { type: [string, "null"] }
+      brand:        { type: [string, "null"] }
+      price:        { type: [number, "null"] }
+      currency:     { type: [string, "null"] }
+      image:        { type: [string, "null"] }
+      rating:       { type: [number, "null"] }
+      reviewCount:  { type: [integer, "null"] }
+    required: [title, price, currency]
+
+- url: https://www.backmarket.com/en-us/p/iphone-15-pro-max-256gb-natural-titanium-unlocked/
+  goal: Extract the product listing on this page.
+  schema:
+    type: object
+    properties:
+      title:        { type: [string, "null"] }
+      price:        { type: [number, "null"] }
+      currency:     { type: [string, "null"] }
+      image:        { type: [string, "null"] }
+      condition:    { type: [string, "null"] }
+    required: [title, price]
+
+# ── Job schema (proves the model generalises beyond products) ─
+- url: https://www.anthropic.com/jobs
+  goal: Extract every job listing visible on this page as an array.
+  schema:
+    type: object
+    properties:
+      jobs:
+        type: array
+        items:
+          type: object
+          properties:
+            title:    { type: string }
+            location: { type: [string, "null"] }
+            team:     { type: [string, "null"] }
+            url:      { type: [string, "null"] }
+          required: [title]
+    required: [jobs]
+
+# Add 100–500 more seeds covering: Amazon, Walmart, Jumia, Konga, Apple
+# variants per region, plus 10–20 hard-negative pages (404s, paywalls,
+# review-only pages) so the model learns to emit nulls / empty arrays.

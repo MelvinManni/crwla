@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+
+# Local secrets
+.env
+.env.local
+
+# Training artifacts — never bake checkpoints into the runtime image.
+training/data/
+training/output/
+training/checkpoints/
+*.gguf
+*.bin
+*.safetensors
+
+# Tests + docs
+tests/
+*.md
+!README.md
+
+# Misc
+.git/
+.gitignore
+.DS_Store
+node_modules/

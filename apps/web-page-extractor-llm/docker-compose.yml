@@ -1,0 +1,92 @@
+# Local stack for web-page-extractor-llm.
+#
+# Services in compose:
+#   - ollama → off-the-shelf ollama/ollama image
+#   - app    → this repo's slim FastAPI image
+#
+# Postgres runs OUTSIDE compose — see `npm run llm:postgres:up`.
+# Why: Docker Desktop on Apple Silicon has a race where the postgres
+# image's fast entrypoint binds before Docker finishes wiring the
+# bridge attachment, leaving the container running but networkless.
+# Running postgres as a standalone `docker run --network bridge` with
+# a published port sidesteps the race; the app reaches it via the
+# Docker Desktop magic hostname `host.docker.internal`. This also
+# matches how production (Railway) works — postgres is a managed
+# service, not a sibling container.
+#
+# Usage:
+#   npm run llm:postgres:up   # ONE-TIME: starts postgres on host port 5432
+#   npm run llm:migrate       # applies db/migrations/*.sql
+#   npm run llm:docker:build  # builds `app`
+#   npm run llm:docker:run    # boots ollama + app
+#   npm run llm:ollama:load   # pulls/builds the model
+
+networks:
+  wpe:
+    name: wpe
+    driver: bridge
+
+services:
+  # ── Ollama daemon ────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:0.4.7
+    container_name: wpe-ollama
+    restart: unless-stopped
+    networks:
+      - wpe
+    extra_hosts:
+      # Maps host.docker.internal → host gateway. Default on Docker
+      # Desktop but explicit for Linux parity.
+      - "host.docker.internal:host-gateway"
+    # Bind to localhost only — only `app` should reach this. Exposing
+    # for easy `npm run llm:ollama:load` from the host.
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: 24h
+      OLLAMA_NUM_PARALLEL: 1
+      OLLAMA_MAX_LOADED_MODELS: 1
+      OLLAMA_FLASH_ATTENTION: 1
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # ── FastAPI app ──────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wpe-app
+    restart: unless-stopped
+    networks:
+      - wpe
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    # .env is optional. The `environment:` block always wins ties.
+    # Postgres lives on the host (npm run llm:postgres:up), reached
+    # via host.docker.internal. Ollama is a sibling compose service,
+    # reached via its service name on the wpe bridge.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      OLLAMA_HOST: ollama:11434
+      # Host port 5434 because 5432 (crwla-postgres) and 5433
+      # (rumor-backend-db) are already in use on this machine.
+      DATABASE_URL: postgres://wpe:wpe@host.docker.internal:5434/wpe
+      PORT: 8000
+
+volumes:
+  # Named volume so GGUF survives `docker compose down`. To wipe:
+  #   docker volume rm web-page-extractor-llm_ollama-models
+  ollama-models:

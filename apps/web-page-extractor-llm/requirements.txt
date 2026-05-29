@@ -1,0 +1,41 @@
+# Runtime deps for web-page-extractor-llm. Versions pinned to known-good
+# combinations as of 2026-05; bump deliberately. Training-only deps
+# (axolotl, unsloth, bitsandbytes, peft, transformers) live in
+# training/requirements-train.txt so the runtime image stays slim.
+
+# ── Web framework ─────────────────────────────────────────────
+fastapi==0.115.5
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+pydantic-settings==2.6.1
+
+# ── HTTP / fetching ───────────────────────────────────────────
+httpx==0.27.2
+playwright==1.48.0
+beautifulsoup4==4.12.3
+lxml==5.3.0
+selectolax==0.3.21          # 10× faster than bs4 for HTML stripping
+
+# ── Database (pgvector) ───────────────────────────────────────
+asyncpg==0.30.0
+pgvector==0.3.6
+
+# ── Embeddings for few-shot retrieval ─────────────────────────
+# Keep on CPU; bge-small is 130MB and fast. Override via env if you
+# prefer a different sentence-transformers model.
+sentence-transformers==3.2.1
+torch==2.5.1                # CPU wheel — Railway has no GPU
+# Force CPU build of torch (Railway has no CUDA). If the auto-resolved
+# wheel pulls CUDA, replace with the cpu index URL in your Railway
+# build env: PIP_INDEX_URL=https://download.pytorch.org/whl/cpu
+
+# ── Agent + validation ────────────────────────────────────────
+langgraph==0.2.50
+jsonschema==4.23.0
+
+# ── Observability ─────────────────────────────────────────────
+structlog==24.4.0
+
+# ── Dev / test (kept light) ───────────────────────────────────
+pytest==8.3.3
+pytest-asyncio==0.24.0
