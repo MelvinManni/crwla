@@ -23,6 +23,7 @@ import { ContactModule } from './modules/contact/contact.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { ShareModule } from './modules/share/share.module';
+import { DigestModule } from './modules/digest/digest.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { QueuesModule } from './queues/queues.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -65,6 +66,7 @@ import { TasksModule } from './tasks/tasks.module';
     OnboardingModule,
     ActivityModule,
     ShareModule,
+    DigestModule,
     NotificationsModule,
     QueuesModule,
     TasksModule,

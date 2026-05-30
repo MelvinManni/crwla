@@ -18,6 +18,10 @@ export class UpdateSearchDto {
 
   @IsOptional() @IsString() filterPrompt?: string;
 
+  // Owner toggle for the scheduled-crawl digest email. Only has an effect on
+  // DAILY/WEEKLY crawls — HOURLY and MANUAL never send a digest.
+  @IsOptional() @IsBoolean() digestEnabled?: boolean;
+
   @IsOptional() @IsIn(UPDATABLE_STATUSES as readonly string[]) status?: SearchStatus;
 
   @IsOptional() @IsArray() @IsString({ each: true }) locations?: string[];

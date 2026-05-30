@@ -4,6 +4,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { MailerService } from '../../core/mail/mailer.service';
 import { EntitlementsService } from '../billing/entitlements.service';
 import { deriveFeatures, type PlanLimits } from '../billing/plans.catalog';
+import { DigestTokenService } from '../digest/digest-token.service';
 
 /** Days-before-expiry on which the renewal reminder fires (cron runs daily). */
 const EXPIRY_THRESHOLDS = [7, 3, 1];
@@ -11,6 +12,12 @@ const EXPIRY_THRESHOLDS = [7, 3, 1];
 const GRACE_DAYS = 7;
 /** Cap on results listed in a digest body. */
 const DIGEST_TOP_N = 5;
+/**
+ * Cron presets that send a crawl digest. Hourly is excluded — digesting every
+ * hour would be spam — and Manual runs aren't scheduled, so only the periodic
+ * Daily/Weekly cadences qualify.
+ */
+const DIGEST_CRONS: ReadonlySet<CronPreset> = new Set([CronPreset.DAILY, CronPreset.WEEKLY]);
 
 /**
  * Sends the three user-facing notification emails. Alert-hit and crawl-digest
@@ -26,6 +33,7 @@ export class NotificationsService {
     private readonly prisma: PrismaService,
     private readonly mailer: MailerService,
     private readonly entitlements: EntitlementsService,
+    private readonly digestTokens: DigestTokenService,
   ) {}
 
   // ---------- per-run: alert hits + crawl digest ----------------------
@@ -106,12 +114,16 @@ export class NotificationsService {
   }
 
   private async sendDigest(
-    search: { id: string; userId: string; name: string; cron: CronPreset; nextRunAt: Date | null; user: { email: string } },
+    search: { id: string; userId: string; name: string; cron: CronPreset; digestEnabled: boolean; nextRunAt: Date | null; user: { email: string } },
     run: { id: string; finishedAt: Date | null; resultsCount: number },
     results: Result[],
   ): Promise<void> {
-    // Digest is for scheduled crawls only — manual one-off runs don't send one.
-    if (search.cron === CronPreset.MANUAL) return;
+    // Owner can opt out per crawl.
+    if (!search.digestEnabled) return;
+    // Digest is for periodic scheduled crawls only. Hourly is too frequent to
+    // digest (it would email every hour) and manual one-off runs aren't
+    // scheduled at all — so only DAILY and WEEKLY crawls get one.
+    if (!DIGEST_CRONS.has(search.cron)) return;
 
     const [totalScanned, prevRun] = await Promise.all([
       this.prisma.result.count({ where: { searchId: search.id } }),
@@ -128,6 +140,7 @@ export class NotificationsService {
     try {
       await this.mailer.sendCrawlDigest(search.user.email, {
         searchId: search.id,
+        pauseToken: this.digestTokens.sign(search.id),
         jobName: search.name,
         schedule: humanizeCron(search.cron),
         newCount,

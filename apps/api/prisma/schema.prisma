@@ -252,6 +252,10 @@ model Search {
   locations    String[]
   sources      String[] // google_news, bing, twitter, blogs…
   cron         CronPreset   @default(DAILY)
+  /// Owner-controlled toggle for the scheduled-crawl digest email. On by
+  /// default; flip off to stop digests for this crawl. Only ever consulted
+  /// for DAILY/WEEKLY crawls — HOURLY and MANUAL never send a digest.
+  digestEnabled Boolean     @default(true) @map("digest_enabled")
   filterPrompt String?      @map("filter_prompt")
   strict       Boolean      @default(false)
   status       SearchStatus @default(RUNNING)

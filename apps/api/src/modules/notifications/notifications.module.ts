@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { QueuesModule } from '../../queues/queues.module';
 import { BillingModule } from '../billing/billing.module';
+import { DigestModule } from '../digest/digest.module';
 import { NotificationsService } from './notifications.service';
 import { PostRunNotificationsProcessor } from '../../queues/notifications/post-run-notifications.processor';
 import { SubscriptionExpiryProcessor } from '../../queues/notifications/subscription-expiry.processor';
@@ -20,7 +21,7 @@ import { SubscriptionExpiryQueue } from '../../queues/notifications/subscription
  * and create a Queues↔Billing cycle — same pattern as ScheduledPlanChanges.
  */
 @Module({
-  imports: [QueuesModule, BillingModule],
+  imports: [QueuesModule, BillingModule, DigestModule],
   providers: [
     NotificationsService,
     PostRunNotificationsProcessor,

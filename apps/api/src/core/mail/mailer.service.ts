@@ -115,6 +115,8 @@ export class MailerService {
     to: string,
     vars: {
       searchId: string;
+      /** Signed token for the no-auth one-click "pause digest" link. */
+      pauseToken: string;
       jobName: string;
       schedule: string;
       newCount: number;
@@ -133,9 +135,10 @@ export class MailerService {
       change_pct: vars.changePct,
       digest_date: vars.digestDate,
       next_crawl: vars.nextCrawl,
-      dashboard_url: this.url(`/searches/${vars.searchId}`),
-      settings_url: this.url(`/searches/${vars.searchId}/settings`),
-      unsubscribe_url: this.url(`/searches/${vars.searchId}/settings`),
+      dashboard_url: this.url(`/crawls/${vars.searchId}`),
+      settings_url: this.url(`/crawls/${vars.searchId}/edit`),
+      // One-click, no-login pause. The token authorizes the toggle on its own.
+      unsubscribe_url: this.url(`/digest/unsubscribe?token=${encodeURIComponent(vars.pauseToken)}`),
       results: vars.results.map((r) => ({
         source: r.source,
         source_initial: initial(r.source),
@@ -148,7 +151,7 @@ export class MailerService {
     const lines = vars.results.map((r) => `• ${r.title} (${r.source}) — ${r.url}`);
     const text =
       `${vars.newCount} new results for "${vars.jobName}" (${vars.schedule} crawl)\n\n` +
-      `${lines.join('\n')}\n\nView all: ${this.url(`/searches/${vars.searchId}`)}`;
+      `${lines.join('\n')}\n\nView all: ${this.url(`/crawls/${vars.searchId}`)}`;
     return this.mail.send({
       to,
       subject: `${vars.newCount} new results — ${vars.jobName}`,

@@ -82,6 +82,7 @@ export type UpdateCrawlInput = {
   cron?: CronPreset;
   filterPrompt?: string;
   strict?: boolean;
+  digestEnabled?: boolean;
   status?: 'RUNNING' | 'PAUSED';
   publicAccess?: boolean;
 };

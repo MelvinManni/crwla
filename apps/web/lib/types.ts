@@ -25,6 +25,7 @@ export type SearchView = {
   sources: string[];
   cron: CronPreset;
   cronLabel: string;
+  digestEnabled: boolean;
   status: SearchStatus;
   filterPrompt: string;
   strict: boolean;

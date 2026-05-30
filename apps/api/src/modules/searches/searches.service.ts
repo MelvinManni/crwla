@@ -72,6 +72,7 @@ function shape(s: Search & { _count?: { results: number } }) {
     sources: s.sources,
     cron: s.cron,
     cronLabel: cronLabel(s.cron),
+    digestEnabled: s.digestEnabled,
     status: s.status,
     filterPrompt: s.filterPrompt ?? '',
     strict: s.strict,
@@ -282,6 +283,7 @@ export class SearchesService {
     if (Array.isArray(dto.locations)) data.locations = dto.locations;
     if (typeof dto.filterPrompt === 'string') data.filterPrompt = dto.filterPrompt;
     if (typeof dto.strict === 'boolean') data.strict = dto.strict;
+    if (typeof dto.digestEnabled === 'boolean') data.digestEnabled = dto.digestEnabled;
     if (dto.cron) data.cron = dto.cron;
     if (dto.status) data.status = dto.status;
     if (typeof dto.publicAccess === 'boolean') {

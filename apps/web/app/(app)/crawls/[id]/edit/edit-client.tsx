@@ -50,6 +50,7 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
   const [cron, setCron] = useState<CronPreset>(initial.cron);
   const [filterPrompt, setFilterPrompt] = useState(initial.filterPrompt);
   const [strict, setStrict] = useState(initial.strict);
+  const [digestEnabled, setDigestEnabled] = useState(initial.digestEnabled);
   const [paused, setPaused] = useState(initial.status === 'PAUSED');
   const [publicAccess, setPublicAccess] = useState(initial.publicAccess);
   const [shareSlug, setShareSlug] = useState<string | null>(initial.shareSlug);
@@ -57,6 +58,10 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
   const disableShare = useDisableCrawlShare();
   const keywordCap = ent?.limits.keywordsPerSearch;
   const canShare = ent?.limits.resultSharing ?? false;
+  // The digest email only fires for periodic schedules — hourly is too
+  // frequent and manual runs aren't scheduled — so the toggle is only
+  // meaningful (and only shown) for daily/weekly crawls.
+  const digestEligible = cron === 'DAILY' || cron === 'WEEKLY';
 
   function onKeywordCapExceeded(attempted: number) {
     if (typeof keywordCap !== 'number') return;
@@ -82,6 +87,7 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
         cron,
         filterPrompt,
         strict,
+        digestEnabled,
         status: paused ? 'PAUSED' : 'RUNNING',
         publicAccess,
       },
@@ -242,6 +248,33 @@ export function EditSearchClient({ initial }: { initial: SearchView }) {
           <Label>Schedule</Label>
           <CronPicker value={cron} onChange={setCron} />
         </div>
+
+        {digestEligible && (
+          <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2.5">
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="digest" className="cursor-pointer">
+                Digest email
+              </Label>
+              <TooltipGroup
+                message={
+                  <span>
+                    Emails a summary of new results after each {cron === 'WEEKLY' ? 'weekly' : 'daily'} crawl.
+                    Turn off to stop digests for this crawl. Hourly and manual crawls never send a digest.
+                  </span>
+                }
+              >
+                <button
+                  type="button"
+                  aria-label="What is the digest email?"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Info size={14} aria-hidden />
+                </button>
+              </TooltipGroup>
+            </div>
+            <Switch id="digest" checked={digestEnabled} onCheckedChange={setDigestEnabled} />
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <Label htmlFor="filter">Filter prompt</Label>
