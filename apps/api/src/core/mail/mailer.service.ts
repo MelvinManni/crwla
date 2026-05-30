@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import * as Handlebars from 'handlebars';
 import { MailService } from './mail.service';
@@ -26,10 +26,35 @@ export class MailerService {
     private readonly mail: MailService,
     private readonly config: ConfigService,
   ) {
-    this.templatesDir =
-      this.config.get<string>('EMAIL_TEMPLATES_DIR') ??
-      join(process.cwd(), 'email-templates');
+    this.templatesDir = this.resolveTemplatesDir();
     this.webBase = (this.config.get<string>('WEB_BASE_URL') ?? 'http://localhost:3000').replace(/\/$/, '');
+  }
+
+  /**
+   * Locate the email-templates directory across environments:
+   *   - prod (compiled): copied next to dist by the build → resolved via
+   *     __dirname (dist/core/mail → dist/email-templates). cwd is unreliable
+   *     on Railway (it's /app, the templates aren't there).
+   *   - dev / worker (ts-node): the source folder at apps/api/email-templates,
+   *     reached via process.cwd().
+   * EMAIL_TEMPLATES_DIR overrides everything. Falls back to the first
+   * candidate so the path still logs usefully if none exist.
+   */
+  private resolveTemplatesDir(): string {
+    const override = this.config.get<string>('EMAIL_TEMPLATES_DIR');
+    const candidates = [
+      override,
+      resolve(__dirname, '..', '..', 'email-templates'),
+      join(process.cwd(), 'email-templates'),
+      join(process.cwd(), 'dist', 'email-templates'),
+    ].filter((p): p is string => !!p);
+    const found = candidates.find((p) => existsSync(p));
+    if (!found) {
+      this.logger.warn(
+        `email-templates dir not found; tried: ${candidates.join(', ')}`,
+      );
+    }
+    return found ?? candidates[0];
   }
 
   // ---------- public senders -----------------------------------------

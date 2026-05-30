@@ -33,6 +33,16 @@ import { AllowUnverified } from '../../common/decorators/allow-unverified.decora
 import { IsStrongPasswordField } from '../../common/validators/strong-password.decorator';
 import { PrismaService } from '../../core/prisma/prisma.service';
 
+/**
+ * Registrable parent domain (eTLD+1, naive last-two-labels) of a hostname.
+ * `www.crwla.com` → `crwla.com`, `crwla.com` → `crwla.com`. Good enough for
+ * our single-domain setup; not public-suffix-list aware (e.g. `foo.co.uk`).
+ */
+function registrableDomain(host: string): string {
+  const parts = host.split('.');
+  return parts.length <= 2 ? host : parts.slice(-2).join('.');
+}
+
 class UpdateProfileDto {
   @IsOptional() @IsString() @MinLength(1) firstName?: string;
   @IsOptional() @IsString() lastName?: string | null;
@@ -53,14 +63,48 @@ export class AuthController {
     private readonly config: ConfigService,
   ) {}
 
+  private get cookieName(): string {
+    return this.config.get<string>('COOKIE_NAME', 'crwla_token');
+  }
+
+  /**
+   * Shared cookie attributes for set + clear (they must match or the browser
+   * won't clear it). The cookie is scoped to the registrable parent domain
+   * derived from WEB_BASE_URL (e.g. https://www.crwla.com → `.crwla.com`) so
+   * the session is shared across subdomains — the Google OAuth callback on
+   * api.crwla.com sets a cookie the www app can read. www↔api are the same
+   * site (same eTLD+1), so SameSite=Lax still sends it cross-subdomain.
+   * Localhost stays host-only + non-secure for dev.
+   */
+  private cookieOptions() {
+    const webBase = this.config.get<string>('WEB_BASE_URL', 'http://localhost:3000');
+    let host = '';
+    try {
+      host = new URL(webBase).hostname;
+    } catch {
+      /* malformed WEB_BASE_URL — fall back to host-only cookie */
+    }
+    const isLocal = !host || host === 'localhost' || /^[\d.]+$/.test(host);
+    return {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      secure: !isLocal,
+      domain: isLocal ? undefined : `.${registrableDomain(host)}`,
+      path: '/' as const,
+    };
+  }
+
   /** Set the httpOnly session cookie carrying the signed JWT. */
   private setSessionCookie(res: Response, token: string) {
-    res.cookie(this.config.get<string>('COOKIE_NAME', 'crwla_token'), token, {
-      httpOnly: true,
-      sameSite: 'lax',
+    res.cookie(this.cookieName, token, {
+      ...this.cookieOptions(),
       maxAge: 1000 * 60 * 60 * 24 * (this.config.get<number>('SESSION_DAYS', 14) ?? 14),
-      secure: this.config.get<string>('NODE_ENV') === 'production',
     });
+  }
+
+  /** Clear it with the same attributes so the browser actually drops it. */
+  private clearSessionCookie(res: Response) {
+    res.clearCookie(this.cookieName, this.cookieOptions());
   }
 
   // Stricter than the global limit + captcha-gated: credential-stuffing and
@@ -145,7 +189,7 @@ export class AuthController {
   @Post('signout')
   @HttpCode(200)
   signout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie(this.config.get<string>('COOKIE_NAME', 'crwla_token'));
+    this.clearSessionCookie(res);
     return { ok: true };
   }
 
@@ -175,7 +219,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.auth.softDeleteUser(user.id);
-    res.clearCookie(this.config.get<string>('COOKIE_NAME', 'crwla_token'));
+    this.clearSessionCookie(res);
     return { ok: true };
   }
 

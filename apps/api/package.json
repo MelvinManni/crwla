@@ -4,7 +4,7 @@
   "private": true,
   "description": "CRWLA API — NestJS backend (auth, searches, scraper, queues, ES)",
   "scripts": {
-    "build": "prisma generate && nest build",
+    "build": "prisma generate && nest build && cp -r email-templates dist/email-templates",
     "start": "prisma migrate deploy && node dist/main.js",
     "dev": "nest start --watch",
     "start:prod": "prisma migrate deploy && node dist/main.js",
