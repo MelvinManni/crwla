@@ -33,8 +33,16 @@ async function bootstrap() {
     }),
   );
   app.use(cookieParser());
+  // CORS_ORIGIN is a comma-separated allowlist. With credentials enabled the
+  // browser forbids `*`, so we pass the explicit list and the cors middleware
+  // reflects whichever origin matches the request.
+  const corsOrigins = config
+    .get<string>('CORS_ORIGIN', 'http://localhost:3000')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: config.get<string>('CORS_ORIGIN', 'http://localhost:3000'),
+    origin: corsOrigins,
     credentials: true,
   });
   app.setGlobalPrefix(config.get<string>('API_BASE_PATH', '/api'));
