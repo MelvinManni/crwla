@@ -7,3 +7,4 @@ export const SEARCH_INDEX_QUEUE = 'search-index';
 export const SCHEDULED_PLAN_CHANGES_QUEUE = 'scheduled-plan-changes';
 export const PRICING_CRAWLA_QUEUE = 'pricing-crawla';
 export const JOB_SEARCH_QUEUE = 'job-search';
+export const COMPANY_SYNC_QUEUE = 'company-sync';

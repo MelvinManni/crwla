@@ -28,6 +28,14 @@ export const envValidationSchema = Joi.object({
   ANTHROPIC_API_KEY: Joi.string().optional().allow(''),
   ANTHROPIC_MODEL: Joi.string().default('claude-haiku-4-5-20251001'),
 
+  // --- Company discovery service (crwla-company-discovery)
+  // When DISCOVERY_SERVICE_URL is set, the API runs a daily job that pulls
+  // verified companies from its token-guarded /companies endpoint.
+  DISCOVERY_SERVICE_URL: Joi.string().uri().optional().allow(''),
+  DISCOVERY_API_TOKEN: Joi.string().optional().allow(''),
+  DISCOVERY_SERVICE_TIMEOUT_MS: Joi.number().default(30000),
+  DISCOVERY_SYNC_CRON: Joi.string().default('0 3 * * *'),
+
   // --- Billing
   WEB_BASE_URL: Joi.string().uri().default('http://localhost:3000'),
   POLAR_ACCESS_TOKEN: Joi.string().optional().allow(''),
@@ -63,6 +71,10 @@ export type EnvVars = {
   DEFAULT_REGION: string;
   ANTHROPIC_API_KEY?: string;
   ANTHROPIC_MODEL: string;
+  DISCOVERY_SERVICE_URL?: string;
+  DISCOVERY_API_TOKEN?: string;
+  DISCOVERY_SERVICE_TIMEOUT_MS: number;
+  DISCOVERY_SYNC_CRON: string;
   MAIL_FROM: string;
   MAIL_SUPPORT_TO: string;
   MAILTRAP_HOST: string;

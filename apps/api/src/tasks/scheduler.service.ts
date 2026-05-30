@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../core/prisma/prisma.service';
 import { ScrapeQueue } from '../queues/scrape/scrape.queue';
 import { ScheduledPlanChangesQueue } from '../queues/scheduled-plan-changes/scheduled-plan-changes.queue';
+import { CompanySyncQueue } from '../queues/company-sync/company-sync.queue';
 import { SearchStatus } from '@prisma/client';
 
 @Injectable()
@@ -12,11 +13,13 @@ export class SchedulerService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly scrapeQueue: ScrapeQueue,
     private readonly planChangesQueue: ScheduledPlanChangesQueue,
+    private readonly companySyncQueue: CompanySyncQueue,
   ) {}
 
   async onModuleInit() {
     await this.reschedule();
     await this.armPlanChangesWorker();
+    await this.armCompanySyncWorker();
   }
 
   /**
@@ -48,6 +51,14 @@ export class SchedulerService implements OnModuleInit {
       this.logger.warn(
         `scheduled-plan-changes arm failed: ${(e as Error).message}`,
       );
+    }
+  }
+
+  private async armCompanySyncWorker() {
+    try {
+      await this.companySyncQueue.scheduleRepeatable();
+    } catch (e) {
+      this.logger.warn(`company-sync arm failed: ${(e as Error).message}`);
     }
   }
 }

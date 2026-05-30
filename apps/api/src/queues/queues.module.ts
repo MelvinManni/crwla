@@ -7,7 +7,11 @@ import { SearchIndexQueue } from './search-index/search-index.queue';
 import { SearchIndexProcessor } from './search-index/search-index.processor';
 import { ScraperModule } from '../modules/scraper/scraper.module';
 import { FilterModule } from '../modules/filter/filter.module';
+import { CompanySyncQueue } from './company-sync/company-sync.queue';
+import { CompanySyncProcessor } from './company-sync/company-sync.processor';
+import { DiscoveryClient } from './company-sync/discovery.client';
 import {
+  COMPANY_SYNC_QUEUE,
   JOB_SEARCH_QUEUE,
   PRICING_CRAWLA_QUEUE,
   SCHEDULED_PLAN_CHANGES_QUEUE,
@@ -21,6 +25,7 @@ export {
   SCHEDULED_PLAN_CHANGES_QUEUE,
   PRICING_CRAWLA_QUEUE,
   JOB_SEARCH_QUEUE,
+  COMPANY_SYNC_QUEUE,
 };
 
 @Module({
@@ -54,11 +59,20 @@ export {
       { name: SCHEDULED_PLAN_CHANGES_QUEUE },
       { name: PRICING_CRAWLA_QUEUE },
       { name: JOB_SEARCH_QUEUE },
+      { name: COMPANY_SYNC_QUEUE },
     ),
     ScraperModule,
     FilterModule,
   ],
-  providers: [ScrapeQueue, ScrapeProcessor, SearchIndexQueue, SearchIndexProcessor],
-  exports: [ScrapeQueue, SearchIndexQueue, BullModule],
+  providers: [
+    ScrapeQueue,
+    ScrapeProcessor,
+    SearchIndexQueue,
+    SearchIndexProcessor,
+    CompanySyncQueue,
+    CompanySyncProcessor,
+    DiscoveryClient,
+  ],
+  exports: [ScrapeQueue, SearchIndexQueue, CompanySyncQueue, BullModule],
 })
 export class QueuesModule {}
