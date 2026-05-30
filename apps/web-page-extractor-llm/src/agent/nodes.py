@@ -136,12 +136,32 @@ async def validate_node(state: dict[str, Any]) -> dict[str, Any]:
 
 
 async def persist_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Write the audit/cache row. Best-effort: persistence failure
-    never breaks the user response — we just lose a cache entry."""
+    """Write the audit/cache row. ALWAYS writes, even on validation
+    failure — failures get a sentinel `output` with the validator
+    attempts and a confidence of 0. The few-shot retriever filters
+    on `confidence >= 0.8`, so failure rows can't poison priming;
+    they're purely for audit + debugging.
+
+    Best-effort: persistence failure never breaks the user response —
+    we just lose an audit entry."""
     req = state["req"]
     parsed = state.get("parsed")
+    confidence = float(state.get("confidence", 1.0))
+    attempts = state.get("validation_attempts", [])
+
+    # On failure, store a structured sentinel so the row is searchable
+    # later ("show me everything where _failed=true") AND keeps the
+    # NOT NULL constraint on `output` satisfied.
     if parsed is None:
-        return {}
+        output_to_store: dict[str, Any] = {
+            "_failed": True,
+            "attempts": attempts,
+            "tokens_in": state.get("tokens_in", 0),
+            "tokens_out": state.get("tokens_out", 0),
+        }
+        confidence = 0.0
+    else:
+        output_to_store = parsed
 
     try:
         await ExtractionsRepo().insert(
@@ -151,11 +171,11 @@ async def persist_node(state: dict[str, Any]) -> dict[str, Any]:
             goal_hash=goal_hash(req.goal, req.schema_),
             schema=req.schema_,
             model=state.get("model", settings.model_name),
-            output=parsed,
+            output=output_to_store,
             tokens_in=state.get("tokens_in", 0),
             tokens_out=state.get("tokens_out", 0),
             latency_ms=state.get("latency_ms", 0),
-            confidence=state.get("confidence", 1.0),
+            confidence=confidence,
             embedding=embed_text(
                 _retrieval_query(req.goal, state.get("page_text", "")),
             ),

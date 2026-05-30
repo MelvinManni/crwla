@@ -15,6 +15,7 @@ import { ProductExtractorService } from './crawling/product-extractor.service';
 import { WebSearchService } from './crawling/web-search.service';
 import { BillingModule } from '../billing/billing.module';
 import { ActivityModule } from '../activity/activity.module';
+import { LlmModule } from '../llm/llm.module';
 import { QueuesModule } from '../../queues/queues.module';
 import { PricingCrawlaQueue } from '../../queues/pricing-crawla/pricing-crawla.queue';
 import { PricingCrawlaProcessor } from '../../queues/pricing-crawla/pricing-crawla.processor';
@@ -24,6 +25,7 @@ import { PRICING_CRAWLA_QUEUE } from '../../queues/queue-names';
   imports: [
     BillingModule,
     ActivityModule,
+    LlmModule,
     QueuesModule,
     // The processor needs its queue instance available locally — we
     // register here (not in QueuesModule) to keep the dep edge inside

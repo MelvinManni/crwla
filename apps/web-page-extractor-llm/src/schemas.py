@@ -47,6 +47,30 @@ class ExtractResponse(BaseModel):
     validation_attempts: list[str] = Field(default_factory=list)
 
 
+# ── /search-products ───────────────────────────────────────────
+
+class ProductSearchRequest(BaseModel):
+    """Search the open web for a product. Service handles DDG
+    search + per-URL crawl + ranking; caller just sends a query."""
+
+    query: str = Field(..., min_length=2, max_length=160)
+    # DDG SERP pages to walk (capped at 10 server-side).
+    pages: int = Field(default=5, ge=1, le=10)
+    # Max ranked results to return.
+    limit: int = Field(default=20, ge=1, le=100)
+    # Bounded parallel crawl factor — bump if you have wide bandwidth.
+    concurrency: int = Field(default=6, ge=1, le=16)
+    # When false, only deterministic JSON-LD/OG/microdata is used.
+    # Useful for fast smoke-tests + when the LLM is mid-restart.
+    use_llm_fallback: bool = True
+
+
+class ProductSearchResponse(BaseModel):
+    query: str
+    results: list[dict[str, Any]]
+    stats: dict[str, Any]
+
+
 # ── OpenAI-compatible /v1/chat/completions ─────────────────────
 
 class ChatMessage(BaseModel):

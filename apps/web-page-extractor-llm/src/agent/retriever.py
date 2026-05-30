@@ -35,25 +35,30 @@ async def retrieve_similar_examples(
     # similarity = 1 - distance. We filter on similarity at the
     # application layer to keep the query plan friendly to the ANN
     # index.
+    #
+    # Each branch of the UNION ALL must be parenthesized — Postgres
+    # syntax rule when sub-queries carry their own ORDER BY + LIMIT.
+    # Without the parens, the first ORDER BY/LIMIT is treated as
+    # applying to the union and the second SELECT errors at `UNION`.
     query = f"""
-        SELECT 'curated' AS kind,
-               bucket,
-               output,
-               1 - (embedding <=> $1::vector) AS similarity
-          FROM examples
-         WHERE active AND bucket = $2
-         ORDER BY embedding <=> $1::vector
-         LIMIT $3
+        (SELECT 'curated' AS kind,
+                bucket,
+                output,
+                1 - (embedding <=> $1::vector) AS similarity
+           FROM examples
+          WHERE active AND bucket = $2
+          ORDER BY embedding <=> $1::vector
+          LIMIT $3)
         UNION ALL
-        SELECT 'learned' AS kind,
-               $2 AS bucket,
-               output,
-               1 - (embedding <=> $1::vector) AS similarity
-          FROM extractions
-         WHERE confidence >= 0.8
-           AND url ILIKE '%' || $2 || '%'
-         ORDER BY embedding <=> $1::vector
-         LIMIT $3
+        (SELECT 'learned' AS kind,
+                $2 AS bucket,
+                output,
+                1 - (embedding <=> $1::vector) AS similarity
+           FROM extractions
+          WHERE confidence >= 0.8
+            AND url ILIKE '%' || $2 || '%'
+          ORDER BY embedding <=> $1::vector
+          LIMIT $3)
     """
 
     async with pool.acquire() as conn:

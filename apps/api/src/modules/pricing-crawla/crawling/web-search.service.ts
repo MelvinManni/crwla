@@ -36,16 +36,22 @@ export class WebSearchService {
   }
 
   /**
-   * Search a single site for a product query.
+   * Search a single site for a product query, walking DDG SERPs up to
+   * `pages` pages deep.
    *   searchSite("iPhone 17 Pro", "amazon.com") → list of amazon.com URLs
    *
-   * Pulls everything DDG returns on one page (up to ~30 organic hits) and
-   * filters to the requested host. Downstream ranking + persistence
-   * decides which subset survives; we don't pre-cap at search time.
+   * Pulls organic hits across the requested pages and filters to the
+   * site host. Downstream ranking + persistence decides which subset
+   * survives.
    */
-  async searchSite(query: string, site: string, limit = 20): Promise<SearchHit[]> {
+  async searchSite(
+    query: string,
+    site: string,
+    limit = 20,
+    pages = 3,
+  ): Promise<SearchHit[]> {
     const q = `${query} site:${site}`;
-    const hits = await this.search(q, Math.max(limit * 2, 30));
+    const hits = await this.search(q, Math.max(limit * 2, 30), pages);
     // Defensive: keep only URLs whose host matches the site filter.
     return hits
       .filter((h) => h.url.includes(site))
@@ -53,33 +59,63 @@ export class WebSearchService {
   }
 
   /**
-   * Broad search. Default `limit` is generous (one full DDG page) so the
-   * caller gets the whole universe of hits to refine; pass a smaller
-   * number only when you need a hard cap.
+   * Broad search across multiple DDG SERPs.
+   *   limit  — max hits to collect across all pages.
+   *   pages  — how many SERPs to walk. Each page ≈ 30 organic hits.
+   *            Default 3 (~90 hits); capped at 10 to avoid rate limits.
+   *
+   * DDG HTML paginates via the `s` offset param (s=0 page 1, s=30
+   * page 2, s=60 page 3, …). Pages fetched sequentially with a brief
+   * pause so we look less like a bot.
    */
-  async search(q: string, limit = 50): Promise<SearchHit[]> {
-    const params = new URLSearchParams({ q, kl: 'us-en' });
-    const url = `https://html.duckduckgo.com/html/?${params.toString()}`;
-    const html = await this.fetchHtml(url);
-    if (!html) return [];
-    const $ = cheerio.load(html);
-    const hits: SearchHit[] = [];
-    $('a.result__a').each((_, a) => {
-      if (hits.length >= limit) return;
-      const href = $(a).attr('href');
-      const title = $(a).text().trim();
-      if (!href || !title) return;
-      const decoded = unwrapDdgRedirect(href);
-      if (!decoded) return;
-      const snippet = $(a)
-        .closest('.result')
-        .find('.result__snippet')
-        .text()
-        .trim()
-        .slice(0, 280);
-      hits.push({ url: decoded, title, snippet });
-    });
-    return hits;
+  async search(q: string, limit = 50, pages = 3): Promise<SearchHit[]> {
+    const totalPages = Math.max(1, Math.min(10, pages));
+    const allHits: SearchHit[] = [];
+    const seenUrls = new Set<string>();
+
+    for (let page = 0; page < totalPages; page++) {
+      if (allHits.length >= limit) break;
+
+      const params = new URLSearchParams({ q, kl: 'us-en' });
+      if (page > 0) params.set('s', String(page * 30));
+      const url = `https://html.duckduckgo.com/html/?${params.toString()}`;
+
+      const html = await this.fetchHtml(url);
+      if (!html) {
+        this.logger.debug(`page ${page + 1}/${totalPages} returned no html`);
+        break;
+      }
+
+      const $ = cheerio.load(html);
+      let pageHits = 0;
+      $('a.result__a').each((_, a) => {
+        if (allHits.length >= limit) return;
+        const href = $(a).attr('href');
+        const title = $(a).text().trim();
+        if (!href || !title) return;
+        const decoded = unwrapDdgRedirect(href);
+        if (!decoded || seenUrls.has(decoded)) return;
+        seenUrls.add(decoded);
+        const snippet = $(a)
+          .closest('.result')
+          .find('.result__snippet')
+          .text()
+          .trim()
+          .slice(0, 280);
+        allHits.push({ url: decoded, title, snippet });
+        pageHits++;
+      });
+
+      this.logger.debug(
+        `page ${page + 1}/${totalPages} → ${pageHits} new hits (total ${allHits.length})`,
+      );
+      if (pageHits === 0) break; // exhausted, no point paginating further
+
+      if (page < totalPages - 1) {
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    }
+    return allHits;
   }
 
   private async fetchHtml(url: string): Promise<string | null> {

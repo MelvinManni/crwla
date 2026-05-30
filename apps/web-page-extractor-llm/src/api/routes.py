@@ -1,9 +1,10 @@
-"""Public HTTP surface. Two routes:
+"""Public HTTP surface. Three routes:
 
-  POST /extract                  → opinionated full-workflow endpoint
+  POST /extract                  → single-URL workflow endpoint
+  POST /search-products          → query → DDG search → crawl → rank
   POST /v1/chat/completions      → OpenAI-compatible thin passthrough
 
-Both honour optional Bearer auth (API_TOKEN env)."""
+All honour optional Bearer auth (API_TOKEN env)."""
 
 from __future__ import annotations
 
@@ -25,7 +26,10 @@ from src.schemas import (
     ChatUsage,
     ExtractRequest,
     ExtractResponse,
+    ProductSearchRequest,
+    ProductSearchResponse,
 )
+from src.search.product_search import search_products
 
 router = APIRouter()
 
@@ -50,6 +54,31 @@ async def extract(
     if not req.url and not req.html:
         raise HTTPException(400, "either `url` or `html` is required")
     return await run_extraction(req)
+
+
+# ── /search-products ──────────────────────────────────────────
+
+@router.post("/search-products", response_model=ProductSearchResponse)
+async def search_products_route(
+    req: ProductSearchRequest,
+    _: Annotated[None, Depends(require_token)],
+) -> ProductSearchResponse:
+    """Search the open web for a product and return ranked listings.
+
+    Caller sends a query (e.g. "iPhone 17 Pro Max 256GB"); the service
+    walks up to `pages` DDG SERPs, filters to commerce hosts, extracts
+    each result (deterministic JSON-LD/OG first, LLM fallback on miss),
+    dedupes + ranks, returns top `limit`.
+
+    No URL required — the service is responsible for discovery."""
+    out = await search_products(
+        query=req.query,
+        pages=req.pages,
+        limit=req.limit,
+        concurrency=req.concurrency,
+        use_llm_fallback=req.use_llm_fallback,
+    )
+    return ProductSearchResponse(**out)
 
 
 # ── /v1/chat/completions ──────────────────────────────────────

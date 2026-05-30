@@ -2,6 +2,31 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { fetch } from 'undici';
 import * as cheerio from 'cheerio';
+import { LlmExtractorService } from '../../llm/llm.service';
+
+/**
+ * Schema we hand to the LLM service when deterministic extraction fails.
+ * Matches the ExtractedProduct shape so the mapping back is trivial.
+ * Kept here (not shared) because the schema IS the contract between this
+ * caller and the LLM — coupling them is intentional.
+ */
+const PRODUCT_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: { type: ['string', 'null'] },
+    price: { type: ['number', 'null'] },
+    currency: { type: ['string', 'null'] },
+    image: { type: ['string', 'null'] },
+    brand: { type: ['string', 'null'] },
+    rating: { type: ['number', 'null'] },
+    reviewCount: { type: ['integer', 'null'] },
+  },
+  required: ['title', 'price', 'currency'],
+} as const;
+
+const LLM_GOAL =
+  'Extract the product listing on this page. ' +
+  'Return null for any field that is not present or not verifiable.';
 
 export type ExtractedProduct = {
   title: string;
@@ -36,7 +61,10 @@ export class ProductExtractorService {
   private readonly timeoutMs: number;
   private readonly userAgent: string;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly llm: LlmExtractorService,
+  ) {
     this.timeoutMs = Number(config.get<string>('PRODUCT_EXTRACTOR_TIMEOUT_MS') ?? 12_000);
     this.userAgent = config.get<string>(
       'USER_AGENT',
@@ -54,27 +82,88 @@ export class ProductExtractorService {
     const fromMicrodata = this.extractMicrodata($);
 
     // Merge: prefer JSON-LD, fill gaps from OG, then microdata. Title
-    // and price are required — drop the listing if both strategies miss.
+    // and price are required.
     const title = fromJsonLd?.title ?? fromMeta?.title ?? fromMicrodata?.title ?? null;
     const price =
       fromJsonLd?.price ?? fromMeta?.price ?? fromMicrodata?.price ?? null;
-    if (!title || price == null || price <= 0) {
-      this.logger.debug(`drop: missing title or price for ${url}`);
-      return null;
-    }
     const currency =
       fromJsonLd?.currency ?? fromMeta?.currency ?? fromMicrodata?.currency ?? 'USD';
     const imageUrl =
       fromJsonLd?.imageUrl ?? fromMeta?.imageUrl ?? fromMicrodata?.imageUrl ?? null;
 
+    if (title && price != null && price > 0) {
+      return {
+        title: title.trim().slice(0, 240),
+        price,
+        currency: currency.toUpperCase().slice(0, 4),
+        imageUrl,
+        rating: fromJsonLd?.rating ?? null,
+        reviewCount: fromJsonLd?.reviewCount ?? 0,
+        brand: fromJsonLd?.brand ?? null,
+        url,
+      };
+    }
+
+    // Deterministic extraction failed. Try the LLM service as a last
+    // resort — only when it's configured (no-op otherwise).
+    const llmResult = await this.tryLlm(url, html);
+    if (llmResult) {
+      this.logger.debug(`llm rescue for ${url}: ${JSON.stringify(llmResult).slice(0, 160)}`);
+      return llmResult;
+    }
+
+    this.logger.debug(`drop: missing title or price for ${url}`);
+    return null;
+  }
+
+  /**
+   * Ask the standalone web-page-extractor-llm service to read this page
+   * and return a structured product. Returns null when:
+   *   - LLM service not configured (LLM_SERVICE_URL unset)
+   *   - Service returned null output / failed validation
+   *   - HTTP error / timeout
+   *
+   * Kept private + fail-soft so the pricing pipeline degrades to "drop
+   * this listing" rather than failing the whole search if the LLM is
+   * down.
+   */
+  private async tryLlm(url: string, html: string): Promise<ExtractedProduct | null> {
+    if (!this.llm.isEnabled()) return null;
+
+    let bucket: string | undefined;
+    try {
+      bucket = new URL(url).hostname.replace(/^www\./, '');
+    } catch {
+      bucket = undefined;
+    }
+
+    const result = await this.llm.extract({
+      html,
+      goal: LLM_GOAL,
+      schema: PRODUCT_SCHEMA as unknown as Record<string, unknown>,
+      bucket,
+    });
+    if (!result || !result.output) return null;
+
+    const out = result.output as {
+      title?: string | null;
+      price?: number | null;
+      currency?: string | null;
+      image?: string | null;
+      brand?: string | null;
+      rating?: number | null;
+      reviewCount?: number | null;
+    };
+    if (!out.title || out.price == null || out.price <= 0) return null;
+
     return {
-      title: title.trim().slice(0, 240),
-      price,
-      currency: currency.toUpperCase().slice(0, 4),
-      imageUrl,
-      rating: fromJsonLd?.rating ?? null,
-      reviewCount: fromJsonLd?.reviewCount ?? 0,
-      brand: fromJsonLd?.brand ?? null,
+      title: out.title.trim().slice(0, 240),
+      price: out.price,
+      currency: (out.currency ?? 'USD').toUpperCase().slice(0, 4),
+      imageUrl: out.image ?? null,
+      rating: out.rating ?? null,
+      reviewCount: out.reviewCount ?? 0,
+      brand: out.brand ?? null,
       url,
     };
   }

@@ -28,10 +28,22 @@ class Settings(BaseSettings):
     ollama_host: str = "127.0.0.1:11434"
 
     # ── Inference tuning ──────────────────────────────────────
-    max_page_tokens: int = 24_000
+    # Budget at 8192-token context (default):
+    #   ~80 system + ~5000 page + ~200 schema + ~600 few-shot +
+    #   ~1024 output, ~1300 headroom.
+    # Holds Qwen2.5-7B Q4_K_M in ~5.4 GB total — fits inside
+    # Docker Desktop's default ~5.9 GB free.
+    max_page_tokens: int = 5_000
     llm_temperature: float = 0.1
     llm_top_p: float = 0.9
-    llm_max_tokens: int = 2048
+    # Output budget. Bumped down from 2048 because product JSON is
+    # tiny (~50–200 tokens) and reserving 2K cuts into input space.
+    llm_max_tokens: int = 1024
+    # Ollama defaults this to 2048 which silently truncates prompts.
+    # Bump up only if you've raised Docker Desktop's VM memory
+    # (Settings → Resources): 12288 needs ~5.7 GB free, 16384 needs
+    # ~6.3 GB free, 32768 needs ~9 GB free.
+    llm_num_ctx: int = 8192
 
     # ── Database ──────────────────────────────────────────────
     database_url: str

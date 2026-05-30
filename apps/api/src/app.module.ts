@@ -19,6 +19,7 @@ import { ContactModule } from './modules/contact/contact.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { ShareModule } from './modules/share/share.module';
+import { LlmModule } from './modules/llm/llm.module';
 import { PricingCrawlaModule } from './modules/pricing-crawla/pricing-crawla.module';
 import { JobSearchModule } from './modules/job-search/job-search.module';
 import { QueuesModule } from './queues/queues.module';
@@ -46,6 +47,7 @@ import { TasksModule } from './tasks/tasks.module';
     OnboardingModule,
     ActivityModule,
     ShareModule,
+    LlmModule,
     PricingCrawlaModule,
     JobSearchModule,
     QueuesModule,

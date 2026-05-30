@@ -37,8 +37,18 @@ class OllamaClient:
         temperature: float = 0.1,
         top_p: float = 0.9,
         max_tokens: int = 2048,
+        num_ctx: int | None = None,
         json_mode: bool = True,
     ) -> ChatResult:
+        # `num_ctx` is the context-window size Ollama allocates for this
+        # request. WITHOUT setting this, Ollama defaults to 2048 even
+        # for models that nominally support 32K — the runtime sees only
+        # the last 2K tokens of the prompt and silently drops the rest.
+        # For schema-driven extraction that means the schema gets
+        # truncated and the model returns garbage. Pass settings default
+        # when caller doesn't override.
+        ctx = num_ctx if num_ctx is not None else settings.llm_num_ctx
+
         payload: dict[str, Any] = {
             "model": model,
             "messages": messages,
@@ -47,6 +57,7 @@ class OllamaClient:
                 "temperature": temperature,
                 "top_p": top_p,
                 "num_predict": max_tokens,
+                "num_ctx": ctx,
             },
             # Ollama supports "format": "json" which makes the runtime
             # try harder to emit a single JSON object. Cheap to enable.
