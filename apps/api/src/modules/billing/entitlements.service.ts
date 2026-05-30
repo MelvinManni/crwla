@@ -167,6 +167,27 @@ export class EntitlementsService {
     }
   }
 
+  /**
+   * Notification gate: true when the user's plan includes email alerts at all
+   * (`emailAlerts !== 0`). FREE includes a small allowance, so it passes; only
+   * a plan that explicitly zeroes email alerts is blocked. The per-config cap
+   * is enforced separately at alert-creation time ({@link assertCanCreateAlert});
+   * this only governs whether outbound notification emails may be sent.
+   */
+  async canSendEmailAlerts(userId: string): Promise<boolean> {
+    const ent = await this.ensureFor(userId);
+    return ent.limits.emailAlerts !== 0;
+  }
+
+  /**
+   * Record that `count` notification emails went out, for usage metering on
+   * the current period's meter. Best-effort — never throws on a missing sub.
+   */
+  async recordEmailAlertSent(userId: string, count = 1): Promise<void> {
+    const sub = await this.activeSubscription(userId);
+    if (sub) await this.bumpUsage(sub.id, { emailAlerts: count });
+  }
+
   async assertExportFormat(userId: string, format: string): Promise<void> {
     const ent = await this.ensureFor(userId);
     if (!ent.limits.exportFormats.includes(format as PlanLimits['exportFormats'][number])) {

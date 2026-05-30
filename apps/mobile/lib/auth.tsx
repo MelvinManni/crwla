@@ -1,10 +1,18 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api, tokenStore } from './api';
 
-type User = { id: string; email: string; name: string; role: 'ADMIN' | 'MEMBER'; team: string | null };
+type User = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string | null;
+  role: 'ADMIN' | 'MEMBER';
+  team: string | null;
+};
 
 export type UpdateProfileInput = {
-  name?: string;
+  firstName?: string;
+  lastName?: string | null;
   email?: string;
   team?: string | null;
   currentPassword?: string;

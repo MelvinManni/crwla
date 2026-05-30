@@ -1,6 +1,6 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
+import { Job, Queue } from 'bullmq';
 import { RunStatus, SearchStatus } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { ThumbnailService } from '../../modules/scraper/thumbnail.service';
@@ -10,7 +10,7 @@ import { textHash, type ScrapedItem } from '../../modules/scraper/google-news.se
 import { FilterService } from '../../modules/filter/filter.service';
 import { ConfigService } from '@nestjs/config';
 import { SearchIndexQueue } from '../search-index/search-index.queue';
-import { SCRAPE_QUEUE } from '../queue-names';
+import { NOTIFICATIONS_QUEUE, SCRAPE_QUEUE } from '../queue-names';
 
 @Processor(SCRAPE_QUEUE, { concurrency: 4 })
 export class ScrapeProcessor extends WorkerHost {
@@ -23,6 +23,7 @@ export class ScrapeProcessor extends WorkerHost {
     private readonly filter: FilterService,
     private readonly config: ConfigService,
     private readonly index: SearchIndexQueue,
+    @InjectQueue(NOTIFICATIONS_QUEUE) private readonly notifications: Queue,
   ) {
     super();
   }
@@ -165,6 +166,22 @@ export class ScrapeProcessor extends WorkerHost {
       // Fan-out to search-index queue (best-effort).
       if (inserted.length) {
         await this.index.bulkIndex(inserted as unknown as Array<{ id: string }>);
+      }
+
+      // Hand off to the notifications worker when the run produced new results:
+      // it matches REALTIME alerts and (for scheduled searches) sends the crawl
+      // digest. Enqueued — not awaited inline — so mail/entitlement work never
+      // blocks or fails the scrape. NotificationsModule owns the processor.
+      if (!errored && inserted.length) {
+        try {
+          await this.notifications.add(
+            'post-run',
+            { searchId: search.id, runId: run.id },
+            { removeOnComplete: 50, removeOnFail: 50 },
+          );
+        } catch (e) {
+          this.logger.warn(`notifications enqueue failed for run ${run.id}: ${(e as Error).message}`);
+        }
       }
 
       return { runId: run.id, inserted: inserted.length, total: kept.length, errors };

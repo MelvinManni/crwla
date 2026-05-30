@@ -8,9 +8,13 @@ export type RunStatus = 'RUNNING' | 'OK' | 'ERROR';
 export type SessionUser = {
   id: string;
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string | null;
   role: Role;
   team: string | null;
+  /** False until the user confirms via the emailed verification link. The
+   *  (app) layout redirects unverified users to /verify-email. */
+  emailVerified: boolean;
 };
 
 export type SearchView = {
@@ -94,7 +98,8 @@ export type AccessRequestView = {
 
 export type UserAdminView = {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string | null;
   email: string;
   team: string;
   role: 'Admin' | 'Member';

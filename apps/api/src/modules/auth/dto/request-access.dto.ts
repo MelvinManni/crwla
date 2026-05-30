@@ -1,4 +1,5 @@
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsStrongPasswordField } from '../../../common/validators/strong-password.decorator';
 
 export class RequestAccessDto {
   @IsString()
@@ -8,8 +9,7 @@ export class RequestAccessDto {
   @IsEmail()
   email!: string;
 
-  @IsString()
-  @MinLength(8)
+  @IsStrongPasswordField()
   password!: string;
 
   @IsOptional()

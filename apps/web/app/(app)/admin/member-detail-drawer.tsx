@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import type { MemberSubscriptionView, UserAdminView } from '@/lib/types';
+import { fullName } from '@/lib/name';
 import { useAdminUserDetail } from '@/lib/queries/admin';
 import { ActivityBars, ActivitySparkline } from './activity-chart';
 
@@ -53,7 +54,7 @@ export function MemberDetailDrawer({
           <>
             <DrawerHeader>
               <DrawerTitle className="flex items-center gap-2">
-                {member.name}
+                {fullName(member)}
                 <Badge variant={member.role === 'Admin' ? 'default' : 'secondary'}>
                   {member.role}
                 </Badge>

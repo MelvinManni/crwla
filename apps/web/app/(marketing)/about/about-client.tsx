@@ -206,15 +206,15 @@ export function AboutClient() {
           who <em className="italic text-mk-accent">use</em> it.
         </h3>
         <div className="grid grid-cols-3 gap-px bg-white/10 max-[800px]:grid-cols-1">
-          <Person glyph="A" name="Ada Okonkwo" role="— Co-founder, product">
-            Ex-journalist. Spent five years writing about Nigerian banks before deciding the research tools were the actual story.
+          <Person glyph="M" name="Mavis Lucky" role="— Co-founder, product">
+            Market Research/Strategist. Spent two years writing about Nigerian fin-tech before deciding the research tools were the actual story.
           </Person>
-          <Person glyph="T" name="Tunde Adesina" role="— Co-founder, engineering">
+          <Person glyph="K" name="Nnamani Kosisochukwu" role="— Co-founder, engineering">
             Built the first crawler over a weekend. Maintains the search engine and most of his sleep deprivation single-handedly.
           </Person>
-          <Person glyph="K" name="Kemi Bello" role="— Design & research">
+          {/* <Person glyph="K" name="Kemi Bello" role="— Design & research">
             Reformed UX researcher at a consumer bank. Now spends her days interviewing power users about why they hate tab bars.
-          </Person>
+          </Person> */}
         </div>
       </section>
 
@@ -231,7 +231,7 @@ export function AboutClient() {
         <div className="flex gap-3.5 justify-center flex-wrap max-[600px]:flex-col max-[600px]:items-stretch">
           <a
             className="inline-flex items-center gap-2 h-[52px] px-[26px] rounded-full text-[15px] font-medium bg-mk-paper text-mk-dark-bg hover:bg-mk-accent hover:text-mk-paper transition-all duration-150 hover:-translate-y-px max-[600px]:h-[46px] max-[600px]:px-5 max-[600px]:text-sm max-[600px]:justify-center"
-            href="/request-access"
+            href="/signup"
           >
             Get started <span>→</span>
           </a>

@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ConfigModule } from './config/config.module';
 import { PrismaModule } from './core/prisma/prisma.module';
+import { MailModule } from './core/mail/mail.module';
 import { ElasticsearchModule } from './integrations/elasticsearch/es.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -19,13 +23,30 @@ import { ContactModule } from './modules/contact/contact.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { ShareModule } from './modules/share/share.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { QueuesModule } from './queues/queues.module';
 import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
     ConfigModule,
+    // Global rate limit. Default applies to every route; auth routes tighten
+    // it with @Throttle, and the Polar webhook opts out with @SkipThrottle.
+    // In-memory store — fine for a single instance; swap in a Redis storage
+    // adapter when running multiple API replicas.
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [
+          {
+            ttl: (config.get<number>('THROTTLE_TTL_SECONDS', 60) ?? 60) * 1000,
+            limit: config.get<number>('THROTTLE_LIMIT', 120) ?? 120,
+          },
+        ],
+      }),
+    }),
     PrismaModule,
+    MailModule,
     ElasticsearchModule,
     HealthModule,
     AuthModule,
@@ -44,8 +65,13 @@ import { TasksModule } from './tasks/tasks.module';
     OnboardingModule,
     ActivityModule,
     ShareModule,
+    NotificationsModule,
     QueuesModule,
     TasksModule,
+  ],
+  providers: [
+    // Apply the rate limiter globally.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}

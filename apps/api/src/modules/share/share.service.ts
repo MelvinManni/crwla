@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { fullName } from '../../common/name.util';
 
 function relTime(t: Date | null | undefined): string | null {
   if (!t) return null;
@@ -83,7 +84,7 @@ export class ShareService {
         name: true,
         keywords: true,
         lastRunAt: true,
-        user: { select: { name: true } },
+        user: { select: { firstName: true, lastName: true } },
       },
     });
     if (!search) return null;
@@ -124,7 +125,7 @@ export class ShareService {
         slug,
         name: search.name,
         keywords: search.keywords,
-        ownerName: search.user.name,
+        ownerName: fullName(search.user),
         lastRun: relTime(search.lastRunAt) ?? 'never',
       },
       results: rows.map((r) => ({

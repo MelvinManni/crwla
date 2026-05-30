@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { requireSession } from "@/lib/auth";
+import { requireVerifiedSession } from "@/lib/auth";
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { AuthHydrator } from "@/components/shell/auth-hydrator";
 import {
@@ -19,7 +19,7 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireSession();
+  const user = await requireVerifiedSession();
   const jar = await cookies();
   const defaultOpen = jar.get("sidebar:state")?.value !== "false";
 

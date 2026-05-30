@@ -9,6 +9,7 @@ import { OnboardingService } from '../onboarding/onboarding.service';
 import { ActivityService } from '../activity/activity.service';
 import { CreateSearchDto } from './dto/create-search.dto';
 import { UpdateSearchDto } from './dto/update-search.dto';
+import { fullName } from '../../common/name.util';
 
 function relTime(t: Date | null | undefined): string | null {
   if (!t) return null;
@@ -397,7 +398,7 @@ export class SearchesService {
   async findShared(slug: string) {
     const search = await this.prisma.search.findFirst({
       where: { shareSlug: slug, publicAccess: true, deletedAt: null },
-      include: { user: { select: { name: true } } },
+      include: { user: { select: { firstName: true, lastName: true } } },
     });
     if (!search) return null;
     return {
@@ -405,7 +406,7 @@ export class SearchesService {
       slug,
       name: search.name,
       keywords: search.keywords,
-      ownerName: search.user.name,
+      ownerName: fullName(search.user),
       createdAt: search.createdAt.getTime(),
       lastRun: relTime(search.lastRunAt) ?? 'never',
     };

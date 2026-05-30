@@ -5,9 +5,12 @@
  */
 export const ACTIVITY_TYPES = [
   'auth.signin',
+  'auth.signup',
   'auth.signout',
   'auth.profile_updated',
   'auth.account_deleted',
+  'auth.email_verified',
+  'auth.google_linked',
   'search.created',
   'search.updated',
   'search.deleted',
@@ -30,9 +33,12 @@ export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 export const ACTIVITY_LABELS: Record<ActivityType, string> = {
   'auth.signin': 'Signed in',
+  'auth.signup': 'Signed up',
   'auth.signout': 'Signed out',
   'auth.profile_updated': 'Updated profile',
   'auth.account_deleted': 'Deleted account',
+  'auth.email_verified': 'Verified email',
+  'auth.google_linked': 'Linked Google account',
   'search.created': 'Created search',
   'search.updated': 'Updated search',
   'search.deleted': 'Deleted search',

@@ -5,3 +5,7 @@
 export const SCRAPE_QUEUE = 'scrape';
 export const SEARCH_INDEX_QUEUE = 'search-index';
 export const SCHEDULED_PLAN_CHANGES_QUEUE = 'scheduled-plan-changes';
+/** Per-run notifications: alert-hit + scheduled-crawl-digest emails. */
+export const NOTIFICATIONS_QUEUE = 'notifications';
+/** Daily sweep that emails users whose subscription is about to expire. */
+export const SUBSCRIPTION_EXPIRY_QUEUE = 'subscription-expiry';

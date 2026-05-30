@@ -11,12 +11,14 @@ import {
 } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
+import { IsStrongPasswordField } from '../../common/validators/strong-password.decorator';
 import { UsersService } from './users.service';
 
 class CreateUserDto {
-  @IsString() @MinLength(1) name!: string;
+  @IsString() @MinLength(1) firstName!: string;
+  @IsOptional() @IsString() lastName?: string;
   @IsEmail() email!: string;
-  @IsString() @MinLength(1) password!: string;
+  @IsStrongPasswordField() password!: string;
   @IsOptional() @IsString() team?: string;
   @IsOptional() @IsIn(['admin', 'member']) role?: 'admin' | 'member';
 }

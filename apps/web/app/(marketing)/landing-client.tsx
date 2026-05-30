@@ -550,7 +550,7 @@ function CTA() {
           </span>
         </h2>
         <div className="flex gap-3.5 justify-center mt-9 flex-wrap max-[900px]:flex-col max-[900px]:items-stretch">
-          <Link className={`${BTN_PRIMARY} ${BTN_LG} max-[900px]:justify-center`} href="/request-access">
+          <Link className={`${BTN_PRIMARY} ${BTN_LG} max-[900px]:justify-center`} href="/signup">
             Get started <span>→</span>
           </Link>
           <Link className={`${BTN_GHOST} ${BTN_LG} max-[900px]:justify-center`} href="/contact">

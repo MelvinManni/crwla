@@ -16,6 +16,24 @@ export const envValidationSchema = Joi.object({
   ADMIN_PASSWORD: Joi.string().default('admin'),
   ADMIN_NAME: Joi.string().default('Admin'),
 
+  // --- Google OAuth (optional — /auth/google 503s until both are set)
+  GOOGLE_CLIENT_ID: Joi.string().optional().allow(''),
+  GOOGLE_CLIENT_SECRET: Joi.string().optional().allow(''),
+  GOOGLE_CALLBACK_URL: Joi.string()
+    .uri()
+    .default('http://localhost:3001/api/auth/google/callback'),
+
+  // --- Email verification
+  EMAIL_VERIFICATION_TTL_HOURS: Joi.number().default(24),
+
+  // --- reCAPTCHA v3 (optional — verification is skipped until the secret is set)
+  RECAPTCHA_SECRET_KEY: Joi.string().optional().allow(''),
+  RECAPTCHA_MIN_SCORE: Joi.number().min(0).max(1).default(0.5),
+
+  // --- Rate limiting (global default; auth routes are stricter in code)
+  THROTTLE_TTL_SECONDS: Joi.number().default(60),
+  THROTTLE_LIMIT: Joi.number().default(120),
+
   REDIS_URL: Joi.string().uri({ scheme: ['redis', 'rediss'] }).optional().allow(''),
 
   ELASTICSEARCH_URL: Joi.string().uri().optional().allow(''),
@@ -55,6 +73,14 @@ export type EnvVars = {
   ADMIN_EMAIL: string;
   ADMIN_PASSWORD: string;
   ADMIN_NAME: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_CALLBACK_URL: string;
+  EMAIL_VERIFICATION_TTL_HOURS: number;
+  RECAPTCHA_SECRET_KEY?: string;
+  RECAPTCHA_MIN_SCORE: number;
+  THROTTLE_TTL_SECONDS: number;
+  THROTTLE_LIMIT: number;
   REDIS_URL?: string;
   ELASTICSEARCH_URL?: string;
   ELASTICSEARCH_INDEX: string;

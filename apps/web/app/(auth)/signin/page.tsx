@@ -1,27 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/sonner";
+import { GoogleButton } from "@/components/auth/google-button";
 import { useSignin } from "@/lib/queries/auth";
+import { useRecaptchaToken } from "@/lib/use-recaptcha";
 
 export default function SigninPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const signin = useSignin();
+  const getRecaptchaToken = useRecaptchaToken();
 
-  function submit() {
+  // Google OAuth bounces back here with `?error=<reason>` when the user
+  // cancels consent or auth fails. Toast it, then strip the param so a
+  // refresh doesn't surface the same message again.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reason = params.get("error");
+    if (!reason) return;
+    toast.error(reason);
+    params.delete("error");
+    const qs = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      window.location.pathname + (qs ? `?${qs}` : ""),
+    );
+  }, []);
+
+  async function submit() {
     if (signin.isPending || signin.isSuccess) return;
     if (!email || !password) {
       setError("email and password required");
       return;
     }
     setError(null);
+    const recaptchaToken = await getRecaptchaToken("signin");
     signin.mutate(
-      { email, password },
+      { email, password, recaptchaToken },
       {
         onSuccess: () => {
           // Hard navigation so the browser re-issues a request to /dashboard
@@ -47,13 +69,22 @@ export default function SigninPage() {
             Sign in to CRWLA
           </h1>
           <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
-            Internal research tool. Access is granted by an admin — request
-            below if you don't have an account.
+            Welcome back. Sign in to pick up where you left off.
           </p>
         </div>
       </div>
 
       <div className="mt-8 flex flex-col gap-3.5">
+        <GoogleButton label="Continue with Google" />
+
+        <div className="flex items-center gap-3 py-1">
+          <div className="h-px flex-1 bg-border" />
+          <span className="font-mono text-[11px] uppercase tracking-wider text-fg-muted">
+            or
+          </span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
         <div className="flex flex-col gap-2">
           <Label htmlFor="email" className="text-[12px] font-medium">
             Work email
@@ -98,10 +129,10 @@ export default function SigninPage() {
         <p className="mt-2 text-center text-[12px] text-fg-muted">
           No account yet?{" "}
           <Link
-            href="/request-access"
+            href="/signup"
             className="font-medium text-fg underline underline-offset-2"
           >
-            Request access
+            Create account
           </Link>
         </p>
       </div>

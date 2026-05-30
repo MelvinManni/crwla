@@ -14,6 +14,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: false });
   const config = app.get(ConfigService);
 
+  // Trust the first proxy hop so `req.ip` (and the rate limiter's per-client
+  // tracking) reflects the real client via X-Forwarded-For — the web app's
+  // Next.js rewrite and most deploy platforms (Railway, etc.) sit in front.
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   // Capture rawBody for the Polar webhook so signatures can be verified.
   // The verifier needs the exact bytes — once express.json() has parsed and
   // re-stringified, the signature is invalid.

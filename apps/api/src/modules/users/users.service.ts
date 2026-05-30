@@ -28,7 +28,8 @@ export class UsersService {
     const users = await this.prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
     return users.map((u) => ({
       id: u.id,
-      name: u.name,
+      firstName: u.firstName,
+      lastName: u.lastName,
       email: u.email,
       team: u.team ?? '—',
       role: u.role === Role.ADMIN ? 'Admin' : 'Member',
@@ -39,7 +40,8 @@ export class UsersService {
   }
 
   async create(input: {
-    name: string;
+    firstName: string;
+    lastName?: string | null;
     email: string;
     password: string;
     team?: string | null;
@@ -47,7 +49,8 @@ export class UsersService {
   }) {
     const created = await this.prisma.user.create({
       data: {
-        name: input.name,
+        firstName: input.firstName,
+        lastName: input.lastName ?? null,
         email: input.email.toLowerCase(),
         passwordHash: this.auth.hashPassword(input.password),
         team: input.team ?? null,
@@ -96,7 +99,8 @@ export class UsersService {
     return {
       user: {
         id: user.id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         team: user.team ?? '—',
         role: user.role === Role.ADMIN ? 'Admin' : 'Member',

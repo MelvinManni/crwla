@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ContactPurpose } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
-import { MailService } from './mail.service';
+import { MailService } from '../../core/mail/mail.service';
 import { CreateContactSubmissionDto } from './contact.dto';
 
 @Injectable()

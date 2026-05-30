@@ -26,6 +26,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { fullName, initials } from "@/lib/name";
 import type { SessionUser } from "@/lib/types";
 import Link from "next/link";
 import { useStartCrawl } from "@/components/start-crawl-modal";
@@ -50,16 +51,6 @@ const NAV_ADMIN: NavItem[] = [
   { href: "/admin/users", label: "Members", icon: Users },
   { href: "/admin/billing", label: "Plans & Pricing", icon: Tag },
 ];
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .map((p) => p[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
 
 export function AppSidebar({ user }: { user: SessionUser }) {
   const pathname = usePathname();
@@ -169,11 +160,11 @@ export function AppSidebar({ user }: { user: SessionUser }) {
             className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full border border-border bg-bg-sunk text-[11px] font-medium text-fg-muted hover:bg-bg hover:text-fg"
             aria-label="Profile"
           >
-            {initials(user.name)}
+            {initials(user)}
           </Link>
           <Link href="/profile" className="min-w-0 flex-1 hover:opacity-80">
             <div className="truncate text-[12px] font-medium text-fg">
-              {user.name}
+              {fullName(user)}
             </div>
             <div className="truncate font-mono text-[10px] text-fg-muted">
               {user.role.toLowerCase()}

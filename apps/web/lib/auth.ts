@@ -33,6 +33,17 @@ export async function requireSession(): Promise<SessionUser> {
   return user;
 }
 
+/**
+ * Like requireSession, but also bounces signed-in-but-unverified users to
+ * /verify-email — otherwise they'd land on the app shell where every API call
+ * 403s (EMAIL_NOT_VERIFIED). Used by the (app) layout to gate the whole app.
+ */
+export async function requireVerifiedSession(): Promise<SessionUser> {
+  const user = await requireSession();
+  if (!user.emailVerified) redirect('/verify-email');
+  return user;
+}
+
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireSession();
   if (user.role !== 'ADMIN') redirect('/dashboard');

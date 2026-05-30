@@ -8,12 +8,20 @@ import { SearchIndexProcessor } from './search-index/search-index.processor';
 import { ScraperModule } from '../modules/scraper/scraper.module';
 import { FilterModule } from '../modules/filter/filter.module';
 import {
+  NOTIFICATIONS_QUEUE,
   SCHEDULED_PLAN_CHANGES_QUEUE,
   SCRAPE_QUEUE,
   SEARCH_INDEX_QUEUE,
+  SUBSCRIPTION_EXPIRY_QUEUE,
 } from './queue-names';
 
-export { SCRAPE_QUEUE, SEARCH_INDEX_QUEUE, SCHEDULED_PLAN_CHANGES_QUEUE };
+export {
+  SCRAPE_QUEUE,
+  SEARCH_INDEX_QUEUE,
+  SCHEDULED_PLAN_CHANGES_QUEUE,
+  NOTIFICATIONS_QUEUE,
+  SUBSCRIPTION_EXPIRY_QUEUE,
+};
 
 @Module({
   imports: [
@@ -40,10 +48,17 @@ export { SCRAPE_QUEUE, SEARCH_INDEX_QUEUE, SCHEDULED_PLAN_CHANGES_QUEUE };
     // service + processor live in BillingModule (not here) because the
     // processor depends on BillingService — keeping the dep edge there
     // avoids a Queues↔Billing import cycle.
+    // The notifications + subscription-expiry queues are registered here too
+    // so any module can `@InjectQueue(...)`. Their processors live in
+    // NotificationsModule (not here) because they depend on EntitlementsService
+    // — keeping that dep edge there avoids a Queues↔Billing import cycle, the
+    // same way SCHEDULED_PLAN_CHANGES_QUEUE's processor lives in BillingModule.
     BullModule.registerQueue(
       { name: SCRAPE_QUEUE },
       { name: SEARCH_INDEX_QUEUE },
       { name: SCHEDULED_PLAN_CHANGES_QUEUE },
+      { name: NOTIFICATIONS_QUEUE },
+      { name: SUBSCRIPTION_EXPIRY_QUEUE },
     ),
     ScraperModule,
     FilterModule,

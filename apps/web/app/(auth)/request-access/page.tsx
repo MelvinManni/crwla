@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PasswordRequirements } from "@/components/auth/password-requirements";
+import { isStrongPassword } from "@/lib/password";
 import { useRequestAccess } from "@/lib/queries/auth";
 
 export default function RequestAccessPage() {
@@ -26,8 +28,8 @@ export default function RequestAccessPage() {
       setError("name, email, and password required");
       return;
     }
-    if (password.length < 8) {
-      setError("password must be at least 8 characters");
+    if (!isStrongPassword(password)) {
+      setError("Please choose a stronger password.");
       return;
     }
     setError(null);
@@ -120,6 +122,7 @@ export default function RequestAccessPage() {
               placeholder="••••••••"
               className="h-11 rounded-lg bg-bg-elev px-3 text-[14px]"
             />
+            <PasswordRequirements value={password} />
           </div>
 
           <div className="flex flex-col gap-2">

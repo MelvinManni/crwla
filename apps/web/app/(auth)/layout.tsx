@@ -1,4 +1,5 @@
 import { redirectIfSession } from '@/lib/auth';
+import { RecaptchaProvider } from '@/components/auth/recaptcha-provider';
 
 // Server component — kicks an already-signed-in visitor over to
 // /dashboard before any auth page renders. /signin and /request-access
@@ -9,5 +10,7 @@ export default async function AuthLayout({
   children: React.ReactNode;
 }) {
   await redirectIfSession();
-  return <>{children}</>;
+  // RecaptchaProvider loads the v3 script for signin/signup (no-op without a
+  // site key configured).
+  return <RecaptchaProvider>{children}</RecaptchaProvider>;
 }

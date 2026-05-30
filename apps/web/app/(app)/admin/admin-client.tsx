@@ -16,6 +16,7 @@ import {
   useUpdateAdminUser,
 } from '@/lib/queries/admin';
 import type { AccessRequestView, UserAdminView } from '@/lib/types';
+import { fullName } from '@/lib/name';
 import { RequestDetailDrawer } from './request-detail-drawer';
 import { MemberDetailDrawer } from './member-detail-drawer';
 
@@ -203,7 +204,7 @@ export function AdminClient({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{u.name}</span>
+                        <span className="font-medium">{fullName(u)}</span>
                         <Badge variant={u.role === 'Admin' ? 'default' : 'secondary'}>{u.role}</Badge>
                         {!u.active && <Badge variant="destructive">Inactive</Badge>}
                       </div>

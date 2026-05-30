@@ -3,9 +3,11 @@ import { ExecutionContext, createParamDecorator } from '@nestjs/common';
 export type AuthenticatedUser = {
   id: string;
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string | null;
   role: 'ADMIN' | 'MEMBER';
   team: string | null;
+  emailVerified: boolean;
 };
 
 export const CurrentUser = createParamDecorator(

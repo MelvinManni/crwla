@@ -17,6 +17,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { PasswordRequirements } from '@/components/auth/password-requirements';
+import { isStrongPassword } from '@/lib/password';
 import { useDeleteAccount, useMe, useUpdateProfile } from '@/lib/queries/auth';
 import type { SessionUser } from '@/lib/types';
 
@@ -27,7 +29,8 @@ export function ProfileClient({ initialUser }: { initialUser: SessionUser }) {
   const updateMut = useUpdateProfile();
   const deleteMut = useDeleteAccount();
 
-  const [name, setName] = useState(me.name);
+  const [firstName, setFirstName] = useState(me.firstName);
+  const [lastName, setLastName] = useState(me.lastName ?? '');
   const [email, setEmail] = useState(me.email);
   const [team, setTeam] = useState(me.team ?? '');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -41,11 +44,16 @@ export function ProfileClient({ initialUser }: { initialUser: SessionUser }) {
     // values and lets the user save a single-field edit without re-typing
     // the rest.
     const patch: Parameters<typeof updateMut.mutate>[0] = {};
-    if (name.trim() && name.trim() !== me.name) patch.name = name.trim();
+    if (firstName.trim() && firstName.trim() !== me.firstName) patch.firstName = firstName.trim();
+    if (lastName.trim() !== (me.lastName ?? '')) patch.lastName = lastName.trim() || null;
     if (email.trim() && email.trim() !== me.email) patch.email = email.trim();
     const nextTeam = team.trim() === '' ? null : team.trim();
     if (nextTeam !== (me.team ?? null)) patch.team = nextTeam;
     if (newPassword) {
+      if (!isStrongPassword(newPassword)) {
+        setError('Please choose a stronger new password.');
+        return;
+      }
       patch.newPassword = newPassword;
       patch.currentPassword = currentPassword;
     }
@@ -98,12 +106,21 @@ export function ProfileClient({ initialUser }: { initialUser: SessionUser }) {
 
         <div className="mt-5 space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="profile-name">Name</Label>
+            <Label htmlFor="profile-first-name">First name</Label>
             <Input
-              id="profile-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
+              id="profile-first-name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              autoComplete="given-name"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="profile-last-name">Last name</Label>
+            <Input
+              id="profile-last-name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              autoComplete="family-name"
             />
           </div>
           <div className="space-y-1.5">
@@ -152,6 +169,7 @@ export function ProfileClient({ initialUser }: { initialUser: SessionUser }) {
                 onChange={(e) => setNewPassword(e.target.value)}
                 autoComplete="new-password"
               />
+              <PasswordRequirements value={newPassword} />
             </div>
           </div>
         </div>

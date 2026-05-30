@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { IsIn, IsOptional } from 'class-validator';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
@@ -84,6 +85,7 @@ export class BillingController {
    * Polar sends in the `webhook-signature` header. The raw body must be
    * forwarded verbatim, see `main.ts` for the JSON-bypass setup.
    */
+  @SkipThrottle()
   @Post('webhook')
   @HttpCode(200)
   async webhook(@Req() req: Request) {

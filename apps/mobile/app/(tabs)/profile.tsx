@@ -22,7 +22,8 @@ export default function ProfileScreen() {
 
   // The tab is gated by AuthProvider — if user is null we just shouldn't
   // render anything (route will redirect via the (tabs) layout).
-  const [name, setName] = useState(user?.name ?? '');
+  const [firstName, setFirstName] = useState(user?.firstName ?? '');
+  const [lastName, setLastName] = useState(user?.lastName ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [team, setTeam] = useState(user?.team ?? '');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -37,7 +38,8 @@ export default function ProfileScreen() {
     setError(null);
 
     const patch: Parameters<typeof updateProfile>[0] = {};
-    if (name.trim() && name.trim() !== user.name) patch.name = name.trim();
+    if (firstName.trim() && firstName.trim() !== user.firstName) patch.firstName = firstName.trim();
+    if (lastName.trim() !== (user.lastName ?? '')) patch.lastName = lastName.trim() || null;
     if (email.trim() && email.trim() !== user.email) patch.email = email.trim();
     const nextTeam = team.trim() === '' ? null : team.trim();
     if (nextTeam !== (user.team ?? null)) patch.team = nextTeam;
@@ -103,7 +105,14 @@ export default function ProfileScreen() {
           <Text style={s.cardTitle}>Account</Text>
           <Text style={s.cardSub}>Changes save immediately. Email must be unique.</Text>
 
-          <Field label="Name" value={name} onChange={setName} autoComplete="name" />
+          <Field label="First name" value={firstName} onChange={setFirstName} autoComplete="name" />
+          <Field
+            label="Last name"
+            value={lastName}
+            onChange={setLastName}
+            autoComplete="name"
+            placeholder="(optional)"
+          />
           <Field
             label="Email"
             value={email}

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="x-apple-disable-message-reformatting" />
+<title>Your scheduled crawl digest</title>
+<!--[if mso]>
+<noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+<![endif]-->
+<style>
+  body { margin:0; padding:0; width:100% !important; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+  table { border-collapse:collapse; }
+  img { border:0; line-height:100%; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
+  a { text-decoration:none; }
+  .hover-accent:hover { background:#e54a26 !important; }
+  .row-hover:hover { background:#f9f8f4 !important; }
+  @media only screen and (max-width:620px) {
+    .container { width:100% !important; }
+    .px { padding-left:24px !important; padding-right:24px !important; }
+    .h1 { font-size:25px !important; line-height:31px !important; }
+    .stack { display:block !important; width:100% !important; padding-bottom:8px !important; }
+  }
+</style>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f2ed; font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
+<div style="display:none; max-height:0; overflow:hidden; opacity:0; font-size:1px; line-height:1px; color:#f4f2ed;">
+  {{new_count}} new results from your {{schedule}} crawl of "{{job_name}}"&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f2ed;">
+  <tr>
+    <td align="center" style="padding:40px 16px;">
+      <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:600px;">
+
+        <!-- brand + date -->
+        <tr>
+          <td style="padding:0 4px 24px 4px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td style="vertical-align:middle;">
+                <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+                  <td width="28" style="vertical-align:middle;">
+                    <div style="width:28px; height:28px; background:#0e0e0e; border-radius:50%; text-align:center; line-height:28px;">
+                      <div style="display:inline-block; width:12px; height:12px; background:#ff5e3a; border-radius:50%; vertical-align:middle;">&nbsp;</div>
+                    </div>
+                  </td>
+                  <td style="padding-left:10px; vertical-align:middle;">
+                    <span style="font-size:15px; font-weight:700; letter-spacing:2px; color:#0e0e0e;">CRWLA</span>
+                  </td>
+                </tr></table>
+              </td>
+              <td align="right" style="vertical-align:middle;">
+                <span style="font-size:12px; color:#a3a094; font-family:'Courier New',monospace;">{{digest_date}}</span>
+              </td>
+            </tr></table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="background:#ffffff; border-radius:16px; overflow:hidden; border:1px solid #e6e2d4;">
+
+            <!-- gradient hero -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td class="px" style="padding:40px 48px 32px 48px; background-color:#2f4a3a; background-image:linear-gradient(135deg,#2f4a3a 0%,#1f3328 55%,#0e0e0e 100%);">
+                  <p style="margin:0; font-size:11px; font-weight:600; letter-spacing:2px; color:#8fc28a; text-transform:uppercase; font-family:'Courier New',monospace;">
+                    {{schedule}} crawl digest
+                  </p>
+                  <h1 class="h1" style="margin:12px 0 0 0; font-size:30px; line-height:36px; font-weight:700; color:#ffffff; letter-spacing:-0.5px;">
+                    {{new_count}} new results for<br/>"{{job_name}}"
+                  </h1>
+                  <!-- inline stats -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px;">
+                    <tr>
+                      <td style="padding-right:28px;">
+                        <p style="margin:0; font-size:24px; font-weight:700; color:#ffffff;">{{new_count}}</p>
+                        <p style="margin:2px 0 0 0; font-size:11px; color:#8fc28a; font-family:'Courier New',monospace; letter-spacing:1px;">NEW</p>
+                      </td>
+                      <td style="padding-right:28px; border-left:1px solid rgba(255,255,255,0.15); padding-left:28px;">
+                        <p style="margin:0; font-size:24px; font-weight:700; color:#ffffff;">{{total_scanned}}</p>
+                        <p style="margin:2px 0 0 0; font-size:11px; color:#8fc28a; font-family:'Courier New',monospace; letter-spacing:1px;">SCANNED</p>
+                      </td>
+                      <td style="border-left:1px solid rgba(255,255,255,0.15); padding-left:28px;">
+                        <p style="margin:0; font-size:24px; font-weight:700; color:#ff8a3a;">+{{change_pct}}%</p>
+                        <p style="margin:2px 0 0 0; font-size:11px; color:#8fc28a; font-family:'Courier New',monospace; letter-spacing:1px;">VS LAST</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <!-- section label -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td class="px" style="padding:30px 48px 0 48px;">
+                  <p style="margin:0; font-size:12px; font-weight:600; letter-spacing:1.5px; color:#a3a094; text-transform:uppercase; font-family:'Courier New',monospace;">
+                    Top results
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- RESULTS LOOP: Mailtrap repeats this block per item in `results` -->
+            {{#each results}}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td class="px row-hover" style="padding:18px 48px; border-bottom:1px solid #f0ede4;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td width="44" style="vertical-align:top;">
+                        <div style="width:36px; height:36px; background:#f4f2ed; border:1px solid #e6e2d4; border-radius:8px; text-align:center; line-height:36px; font-size:13px; font-weight:700; color:#2f4a3a; font-family:'Courier New',monospace;">{{this.source_initial}}</div>
+                      </td>
+                      <td style="vertical-align:top; padding-left:6px;">
+                        <p style="margin:0; font-size:11px; color:#a3a094; font-family:'Courier New',monospace; letter-spacing:0.5px;">{{this.source}} &middot; {{this.time}}</p>
+                        <a href="{{this.url}}" target="_blank" style="display:block; margin:4px 0 0 0; font-size:15px; line-height:21px; font-weight:600; color:#0e0e0e;">{{this.title}}</a>
+                        <p style="margin:5px 0 0 0; font-size:13px; line-height:19px; color:#6e6b63;">{{this.snippet}}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            {{/each}}
+
+            <!-- view all button -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td class="px" align="center" style="padding:28px 48px 8px 48px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="border-radius:10px; background:#0e0e0e;" class="hover-accent">
+                        <a href="{{dashboard_url}}" target="_blank" style="display:inline-block; padding:14px 32px; font-size:15px; font-weight:600; color:#ffffff; border-radius:10px;">
+                          View all {{new_count}} results &nbsp;&rarr;
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <!-- footer note -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td class="px" style="padding:24px 48px 40px 48px;">
+                  <p style="margin:0; font-size:13px; line-height:20px; color:#a3a094; text-align:center;">
+                    Scheduled <strong style="color:#6e6b63;">{{schedule}}</strong> · next crawl {{next_crawl}}.<br/>
+                    <a href="{{settings_url}}" style="color:#ff5e3a; text-decoration:underline;">Edit schedule</a> &nbsp;·&nbsp;
+                    <a href="{{unsubscribe_url}}" style="color:#6e6b63; text-decoration:underline;">Pause digest</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:28px 16px 0 16px;" align="center">
+            <p style="margin:0; font-size:12px; line-height:18px; color:#a3a094;">
+              CRWLA · Parallel search aggregator · Lagos
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { AccessRequestStatus, Role } from '@prisma/client';
+import { splitName } from '../../common/name.util';
 
 function relTime(t: Date | null | undefined): string {
   if (!t) return 'never';
@@ -47,14 +48,18 @@ export class AccessRequestsService {
       });
       return { ok: true, alreadyMember: true };
     }
+    const { firstName, lastName } = splitName(reqRow.name);
     await this.prisma.user.create({
       data: {
-        name: reqRow.name,
+        firstName,
+        lastName,
         email: reqRow.email.toLowerCase(),
         passwordHash: reqRow.passwordHash,
         team: reqRow.team,
         role: Role.MEMBER,
         active: true,
+        // Admin-approved accounts are trusted — no email verification needed.
+        emailVerifiedAt: new Date(),
       },
     });
     await this.prisma.accessRequest.update({

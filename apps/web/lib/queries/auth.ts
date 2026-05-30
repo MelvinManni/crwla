@@ -7,8 +7,44 @@ import type { SessionUser } from '@/lib/types';
 
 export function useSignin() {
   return useMutation({
-    mutationFn: (input: { email: string; password: string }) =>
+    mutationFn: (input: { email: string; password: string; recaptchaToken?: string }) =>
       api.post<{ user: SessionUser }>('/auth/signin', input),
+  });
+}
+
+export type SignupInput = {
+  firstName: string;
+  lastName?: string;
+  email: string;
+  password: string;
+  team?: string;
+  recaptchaToken?: string;
+};
+
+/**
+ * Self-serve signup. The API creates the account, emails a verification link,
+ * and signs the user in immediately (cookie set) — but protected routes stay
+ * gated until they verify, so callers should send them to /verify-email.
+ */
+export function useSignup() {
+  return useMutation({
+    mutationFn: (input: SignupInput) =>
+      api.post<{ user: SessionUser; emailVerificationRequired: boolean }>('/auth/signup', input),
+  });
+}
+
+/** Confirm the emailed token. On success the API refreshes the session cookie. */
+export function useVerifyEmail() {
+  return useMutation({
+    mutationFn: (input: { token: string }) =>
+      api.post<{ user: SessionUser }>('/auth/verify-email', input),
+  });
+}
+
+/** Re-send the verification email for the currently signed-in (unverified) user. */
+export function useResendVerification() {
+  return useMutation({
+    mutationFn: () => api.post<{ ok: boolean }>('/auth/resend-verification'),
   });
 }
 
@@ -46,7 +82,8 @@ export function useMe(opts?: { initialData?: SessionUser }) {
 }
 
 export type UpdateProfileInput = {
-  name?: string;
+  firstName?: string;
+  lastName?: string | null;
   email?: string;
   team?: string | null;
   currentPassword?: string;

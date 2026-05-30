@@ -5,6 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { GoogleStrategy } from './google.strategy';
+import { RecaptchaService } from './recaptcha.service';
 import { BillingModule } from '../billing/billing.module';
 
 @Module({
@@ -23,7 +25,25 @@ import { BillingModule } from '../billing/billing.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    RecaptchaService,
+    // GoogleStrategy registers the 'google' passport strategy in its
+    // constructor, which throws when clientID is empty. So only instantiate it
+    // when Google OAuth is actually configured; otherwise the route 503s via
+    // GoogleOauthGuard.
+    {
+      provide: GoogleStrategy,
+      inject: [AuthService, ConfigService],
+      useFactory: (auth: AuthService, config: ConfigService) => {
+        const id = config.get<string>('GOOGLE_CLIENT_ID');
+        const secret = config.get<string>('GOOGLE_CLIENT_SECRET');
+        if (!id || !secret) return null;
+        return new GoogleStrategy(auth, config);
+      },
+    },
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

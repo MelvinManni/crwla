@@ -215,7 +215,7 @@ export function PricingClient({ initialPlans }: { initialPlans: PlanView[] }) {
         <div className="flex gap-3.5 justify-center flex-wrap max-[600px]:flex-col max-[600px]:items-stretch">
           <a
             className="inline-flex items-center gap-2 h-[52px] px-[26px] rounded-full text-[15px] font-medium bg-mk-paper text-mk-dark-bg hover:bg-mk-accent hover:text-mk-paper transition-all duration-150 hover:-translate-y-px max-[600px]:h-[46px] max-[600px]:px-5 max-[600px]:text-sm max-[600px]:justify-center"
-            href="/request-access"
+            href="/signup"
           >
             Get started <span>→</span>
           </a>
@@ -319,7 +319,7 @@ function PlanCard({
       </div>
 
       <a
-        href="/request-access"
+        href="/signup"
         className={`inline-flex items-center justify-center h-[44px] rounded-full text-[13.5px] font-medium transition-all duration-150 hover:-translate-y-px ${
           featured
             ? 'bg-mk-accent text-mk-paper hover:bg-mk-paper hover:text-mk-dark-bg'
