@@ -33,6 +33,12 @@ export const organizationSchema = {
   logo: absoluteUrl('/opengraph-image'),
   description:
     'CRWLA is a keyword-driven web research aggregator that runs hundreds of keywords across the web, social, news, and blogs in parallel.',
+  // "Who created it" trust signal (E-E-A-T) — mirrors the named founders on /about.
+  // Keep this in sync with the <Person> blocks in about-client.tsx.
+  founder: [
+    { '@type': 'Person', name: 'Mavis Lucky', jobTitle: 'Co-founder, Product' },
+    { '@type': 'Person', name: 'Nnamani Kosisochukwu Melvin', jobTitle: 'Co-founder, Engineering' },
+  ],
   email: 'hello@crwla.com',
   contactPoint: [
     {

@@ -174,6 +174,13 @@ When you add new functionality, these checklists keep the harness self-consisten
 1. Add under `apps/mobile/app/(auth)` or `apps/mobile/app/(tabs)`.
 2. Use the `useAuth()` context in `apps/mobile/lib/auth.tsx` for session state — don't read `expo-secure-store` directly from screens.
 
+### 5g. New content / blog / editorial page (people-first content)
+This is a **judgment checklist, not a grep-able invariant** — there's no mechanical verify. It applies to article-style content (blog, changelog, guides, comparisons), **not** product marketing pages. Follows Google's "Creating helpful, reliable, people-first content" guide (https://developers.google.com/search/docs/fundamentals/creating-helpful-content). Also satisfy I-10 (canonical/OG/sitemap) for any such page.
+1. **Who** — attribute it. Real byline + author/credibility info; reflect any new public person in the `Organization`/author JSON-LD (keep `components/metadata/JsonLd.tsx` `founder[]` in sync with `about-client.tsx`).
+2. **How** — if a claim rests on testing/research, state the method and evidence. If AI/automation drafted it, disclose that and why it served the reader — never mass-produce multi-topic pages for ranking.
+3. **Why** — write for the reader, not the ranking. Add original insight/value beyond restating obvious info; no arbitrary word counts; don't fake freshness (only change dates on real updates) or make unconfirmed claims.
+4. E-E-A-T bar: Experience, Expertise, Authoritativeness, Trust (trust is foundational; weigh hardest on any YMYL topic). Ask "would a reader bookmark/share this?" before shipping.
+
 ---
 
 ## 6. Configuration matrix
