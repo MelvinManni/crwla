@@ -3,9 +3,22 @@ import { api } from '@/lib/api';
 import type { PlanView } from '@/lib/queries/billing';
 import { PricingClient } from './pricing-client';
 
+const description =
+  'Simple CRWLA pricing — pick a plan, cancel any time, no ads ever. Start free with 50 searches a day and upgrade as your research scales.';
+
 export const metadata: Metadata = {
-  title: 'Pricing — CRWLA',
-  description: 'Pick a plan. Cancel any time. No ads, ever.',
+  title: 'Pricing',
+  description,
+  alternates: { canonical: '/pricing' },
+  openGraph: {
+    title: 'CRWLA Pricing',
+    description,
+    url: '/pricing',
+  },
+  twitter: {
+    title: 'CRWLA Pricing',
+    description,
+  },
 };
 
 export default async function PricingPage() {

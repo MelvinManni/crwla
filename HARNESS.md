@@ -104,6 +104,12 @@ Each invariant has: **rule**, **why**, **verify**, **repair**.
 - **Verify**: `./.claude/hooks/check-og-images.sh` exits 0. The hook also runs as a `Stop` hook (`.claude/settings.local.json`) so a Claude session that adds a `page.tsx` cannot end without its OG component.
 - **Repair**: Add a `<RouteName>Og.tsx` to `apps/web/components/metadata/` (see that folder's `README.md` for the convention and `DESIGN_PROMPT.md` for the visual brief), then add an `opengraph-image.tsx` next to the offending `page.tsx`. Dynamic routes should fetch only the slot fields they need server-side and pass them as props.
 
+### I-10. Every public marketing page carries canonical + unique SEO metadata
+- **Rule**: Each `apps/web/app/(marketing)/**/page.tsx` exports a `metadata` with a unique `description`, `alternates.canonical`, and per-page `openGraph`/`twitter`. The canonical origin comes from `apps/web/lib/seo.ts` (`SITE_URL`, default `https://crwla.com`, override via `NEXT_PUBLIC_SITE_URL`) — **never hardcode the domain**; build absolute URLs with `absoluteUrl()`. The root `apps/web/app/layout.tsx` sets `metadataBase`, the `%s · CRWLA` title template, default robots (`index/follow`), and default OG/Twitter cards. `app/sitemap.ts` lists every public marketing URL and `app/robots.ts` disallows the authenticated app + auth/transactional routes. Structured data (JSON-LD) lives in `components/metadata/JsonLd.tsx` and renders on the landing page. Conventions follow Google's SEO Starter Guide (https://developers.google.com/search/docs/fundamentals/seo-starter-guide).
+- **Why**: The marketing pages are the only indexable surface; the authenticated app must stay out of search. Missing canonicals invite duplicate-content splits across `dev.crwla.com`/`crwla.com`, and a relative `metadataBase` breaks OG/canonical absolute URLs in link previews and search results.
+- **Verify**: `grep -L "alternates" apps/web/app/\(marketing\)/**/page.tsx` prints nothing; `apps/web/app/sitemap.ts` and `apps/web/app/robots.ts` exist; `grep -RE "https?://(www\.)?crwla\.com" apps/web/app apps/web/components` finds no hardcoded origin outside `lib/seo.ts`.
+- **Repair**: Add the missing `alternates.canonical` + `openGraph`/`twitter` to the page's `metadata` (copy the shape from `app/(marketing)/about/page.tsx`); add the route to `app/sitemap.ts`; if it's a private route that leaked, add it to the `disallow` list in `app/robots.ts`.
+
 ---
 
 ## 4. Boot-time self-check
@@ -162,6 +168,7 @@ When you add new functionality, these checklists keep the harness self-consisten
 3. Use shadcn primitives in `apps/web/components/ui/`. Do not reach into Tailwind utility classes for layout that has a primitive.
 4. Add the route to `apps/web/middleware.ts` matcher if the auth gate is the only thing standing in front of it.
 5. **OG image (I-9):** add `apps/web/components/metadata/<RouteName>Og.tsx` and a sibling `opengraph-image.tsx` that calls `renderOg(<RouteNameOg {...slots} />)`. For dynamic routes, fetch only the small slot payload (≤90 chars per text field) inside `opengraph-image.tsx` — don't reuse the full page loader. The Stop hook at `.claude/hooks/check-og-images.sh` enforces this; see `apps/web/components/metadata/README.md` for the convention and `DESIGN_PROMPT.md` for the visual brief.
+6. **SEO metadata (I-10), public/marketing routes only:** export `metadata` with a unique `description`, `alternates.canonical`, and per-page `openGraph`/`twitter` (use `SITE_URL`/`absoluteUrl()` from `apps/web/lib/seo.ts` — never hardcode the domain), and add the route to `app/sitemap.ts`. If the route is private/authenticated, instead add it to the `disallow` list in `app/robots.ts`.
 
 ### 5f. New mobile screen
 1. Add under `apps/mobile/app/(auth)` or `apps/mobile/app/(tabs)`.
