@@ -39,7 +39,7 @@ const FONTS = {
 export function OgFrame({
   caption,
   footnote = '',
-  url = 'crwla.app',
+  url = 'crwla.com',
   children,
 }: {
   /** Top-right tag text — uppercase short phrase, e.g. "PARALLEL SEARCH". */
